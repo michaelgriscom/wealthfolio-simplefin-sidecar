@@ -1,31 +1,5 @@
 # Wealthfolio SimpleFIN Sidecar
 
-A small, unattended sidecar that pulls your current investment holdings from the
-[SimpleFIN Bridge](https://beta-bridge.simplefin.org) and writes them into
-[Wealthfolio](https://wealthfolio.app) as **dated holdings snapshots**, on a
-daily schedule — so your asset allocation stays current without manual entry.
-
-It runs as its own container alongside a self-hosted Wealthfolio server and talks
-to it over the REST API. Configuration is a single JSON file plus a few env vars —
-no UI.
-
-> **Prefer point-and-click?** There's a companion Wealthfolio **addon** that does
-> the same SimpleFIN → snapshot mapping interactively inside the Wealthfolio app
-> (manual "Sync now", no scheduling): **[wealthfolio-simplefin-sync](https://github.com/michaelgriscom/wealthfolio-simplefin-sync)**.
-> Use the addon if you want a GUI; use this sidecar if you want automated,
-> hands-off sync.
-
-## Why snapshots?
-
-The SimpleFIN Bridge returns a current `holdings` array for brokerage accounts
-(symbol, shares, market value, cost basis). Wealthfolio's HOLDINGS tracking mode
-accepts a point-in-time snapshot of positions + cash, which is a direct match —
-no need to reconstruct a buy/sell transaction history.
-
-Money-market / sweep funds (VMFXX, SPAXX, FDRXX, …) are folded into the account's
-cash balance instead of being tracked as securities, so allocation treats them as
-cash.
-
 ## Requirements
 
 - A self-hosted **Wealthfolio server** (3.5+) reachable over HTTP.

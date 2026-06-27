@@ -1,0 +1,31 @@
+{
+  "name": "wealthfolio-simplefin-sidecar",
+  "version": "0.1.0",
+  "description": "Standalone sidecar that syncs SimpleFIN Bridge investment holdings into Wealthfolio as dated holdings snapshots, on a schedule.",
+  "type": "module",
+  "private": true,
+  "author": "Michael Griscom",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/michaelgriscom/wealthfolio-simplefin-sidecar.git"
+  },
+  "keywords": [
+    "wealthfolio",
+    "simplefin",
+    "sidecar",
+    "investments",
+    "asset-allocation"
+  ],
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "sync:once": "tsx src/main.ts --once",
+    "claim": "tsx src/claim.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.33",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3"
+  }
+}

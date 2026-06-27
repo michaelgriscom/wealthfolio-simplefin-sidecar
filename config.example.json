@@ -1,0 +1,11 @@
+{
+  "simplefinAccessUrl": "https://USERNAME:PASSWORD@bridge.simplefin.org/simplefin",
+  "exchangeMic": "XNAS",
+  "mapping": {
+    "<wealthfolio-account-id>": ["<simplefin-account-id>"],
+    "<another-wealthfolio-account-id>": [
+      "<simplefin-account-id>",
+      "<second-simplefin-account-id-to-aggregate>"
+    ]
+  }
+}

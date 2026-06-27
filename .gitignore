@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Local config — holds your SimpleFIN access URL; never commit it
+config.json
+
+# Env files
+.env
+.env.local
+
+# TypeScript
+*.tsbuildinfo
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store

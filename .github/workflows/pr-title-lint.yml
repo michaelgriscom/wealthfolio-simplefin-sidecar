@@ -1,0 +1,34 @@
+name: Lint PR Title
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+permissions:
+  pull-requests: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title follows Conventional Commits
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Allowed types, kept in sync with release-please-config.json
+          types: |
+            feat
+            fix
+            perf
+            docs
+            chore
+            refactor
+            test
+            build
+            ci
+            style
+            revert

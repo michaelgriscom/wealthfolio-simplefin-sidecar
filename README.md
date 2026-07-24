@@ -34,6 +34,10 @@ in the sidecar.
 
 </details>
 
+Money-market and sweep funds (VMFXX, SPAXX, FDRXX, …) are folded into the
+account's cash balance rather than tracked as securities, so allocation treats
+them as cash — override the list with `CASH_SYMBOLS`.
+
 ## Requirements
 
 - A self-hosted **Wealthfolio server** (3.5+) reachable over HTTP.

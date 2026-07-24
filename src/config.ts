@@ -3,11 +3,6 @@ import { parseJsonc } from "./jsonc";
 
 export interface SyncConfig {
   wfBaseUrl: string;
-  /**
-   * Wealthfolio login password, or undefined when the server doesn't want one.
-   * Deployments behind a forward-auth proxy run with `WF_AUTH_REQUIRED=false`
-   * and have no password to give, so logging in is skipped entirely.
-   */
   wfPassword?: string;
   simplefinAccessUrl: string;
   /** Wealthfolio account id -> list of SimpleFIN account ids to aggregate into it. */
@@ -34,8 +29,6 @@ function required(key: string, value: string | undefined): string {
 /**
  * Config comes from a mounted JSON file (access URL + mapping — avoids putting
  * credentials and JSON through .env interpolation) plus a few simple env vars.
- * The file may use comments and trailing commas so the opaque account ids in
- * `mapping` can be labelled.
  */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): SyncConfig {
   const file: FileConfig = (() => {

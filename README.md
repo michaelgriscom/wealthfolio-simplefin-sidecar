@@ -23,7 +23,7 @@ single-use and is consumed by this call.)
 ## Configuration
 
 Create a `config.json` (see [`config.example.json`](config.example.json)) and mount
-it at `/config/config.json`. Keep it out of version control — it holds credentials.
+it at `/config/config.json`.
 
 The file is parsed as **JSONC**: `//` and `/* */` comments and trailing commas are
 allowed.
@@ -68,7 +68,7 @@ curl -s -u 'USER:PASS' 'https://bridge.simplefin.org/simplefin/accounts?balances
 | `WF_PASSWORD` | — (optional) | Wealthfolio login password. Omit if the server runs with `WF_AUTH_REQUIRED=false` |
 | `SYNC_AT` | `04:00` | Daily run time (24h local) |
 | `RUN_ON_START` | `false` | Sync once on startup |
-| `CASH_SYMBOLS` | `VMFXX,VMRXX,SPAXX,SPRXX,FDRXX,FZFXX,SWVXX` | Comma-separated tickers to treat as cash. Prepopulated with money-market and sweep funds (VMFXX, SPAXX, FDRXX, etc). |
+| `CASH_SYMBOLS` | `VMFXX,VMRXX,SPAXX,SPRXX,FDRXX,FZFXX,SWVXX` | Comma-separated tickers to treat as cash. Prepopulated with money-market and sweep funds. |
 | `EXCHANGE_MIC` | `XNAS` | Exchange for synced positions (also `exchangeMic` in the config file) |
 | `CONFIG_FILE` | `/config/config.json` | Path to the config file |
 | `PORT` | `8080` | Health/status/trigger HTTP port |

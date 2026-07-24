@@ -4,7 +4,7 @@
 
 - A self-hosted **Wealthfolio server** (3.5+) reachable over HTTP.
 - A SimpleFIN Bridge **access URL** (see below).
-- **⚠️ One Wealthfolio account per brokerage, set to *HOLDINGS* tracking mode.** Currently, SimpleFIN does not supply sufficient information (e.g. ticker, share quantity) to support tracking mode.
+- **⚠️ One Wealthfolio account per brokerage, set to *HOLDINGS* tracking mode.** Currently, SimpleFIN does not supply sufficient information in its transactions (e.g. ticker, share quantity) to support tracking mode.
 
 ## Getting a SimpleFIN access URL
 

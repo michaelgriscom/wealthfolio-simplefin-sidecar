@@ -2,11 +2,7 @@
  * Minimal JSONC support: strip `//` and block comments, then drop trailing
  * commas, so the mapping file can be annotated in place.
  *
- * Account ids are opaque UUIDs on both sides, so an uncommented mapping is
- * unreadable and unmaintainable — you cannot tell which entry is which account
- * without cross-referencing two APIs. Rather than take a dependency for this,
- * both passes are string-aware state machines: anything inside a JSON string
- * literal (including escaped quotes and `//` inside a URL) is copied verbatim.
+ * Since this project reads sensitive financial data, we hand-roll a parser rather than pull in any dependencies.
  */
 
 /** Remove `//` line comments and block comments outside of string literals. */

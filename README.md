@@ -68,10 +68,7 @@ curl -s -u 'USER:PASS' 'https://bridge.simplefin.org/simplefin/accounts?balances
 | `WF_PASSWORD` | — (optional) | Wealthfolio login password. Omit if the server runs with `WF_AUTH_REQUIRED=false` |
 | `SYNC_AT` | `04:00` | Daily run time (24h local) |
 | `RUN_ON_START` | `false` | Sync once on startup |
-| `CASH_SYMBOLS` | built-in list | Comma-separated tickers to treat as cash. 
-Money-market and sweep funds (VMFXX, SPAXX, FDRXX, …) are assigned to the
-account's cash balance rather than tracked as securities, so allocation treats
-them as cash. Override the list with `CASH_SYMBOLS`. |
+| `CASH_SYMBOLS` | built-in list | Comma-separated tickers to treat as cash. Prepopulated with money-market and sweep funds (VMFXX, SPAXX, FDRXX, etc). |
 | `EXCHANGE_MIC` | `XNAS` | Exchange for synced positions (also `exchangeMic` in the config file) |
 | `CONFIG_FILE` | `/config/config.json` | Path to the config file |
 | `PORT` | `8080` | Health/status/trigger HTTP port |

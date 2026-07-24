@@ -2,11 +2,6 @@ import type { SnapshotHoldingInput } from "./types";
 
 /**
  * Minimal client for Wealthfolio's server REST API.
- *
- * Authentication is optional. A server started with `WF_AUTH_REQUIRED=false`
- * (the usual shape behind a forward-auth reverse proxy) issues no session
- * cookie and expects none, so `login()` is a no-op when no password is given
- * and requests simply go out unauthenticated.
  */
 export class WealthfolioClient {
   private cookie: string | null = null;

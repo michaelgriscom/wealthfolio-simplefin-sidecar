@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
+import { parseJsonc } from "./jsonc";
 
 export interface SyncConfig {
   wfBaseUrl: string;
-  wfPassword: string;
+  wfPassword?: string;
   simplefinAccessUrl: string;
   /** Wealthfolio account id -> list of SimpleFIN account ids to aggregate into it. */
   mapping: Record<string, string[]>;
@@ -33,7 +34,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SyncConfig {
   const file: FileConfig = (() => {
     const path = env.CONFIG_FILE ?? "/config/config.json";
     try {
-      return JSON.parse(readFileSync(path, "utf8")) as FileConfig;
+      return parseJsonc<FileConfig>(readFileSync(path, "utf8"));
     } catch (e) {
       throw new Error(`Failed to read config file at ${path}: ${(e as Error).message}`);
     }
@@ -46,7 +47,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SyncConfig {
 
   return {
     wfBaseUrl: (env.WF_BASE_URL ?? "http://wealthfolio:8088").replace(/\/+$/, ""),
-    wfPassword: required("WF_PASSWORD", env.WF_PASSWORD),
+    wfPassword: env.WF_PASSWORD || undefined,
     simplefinAccessUrl: required("simplefinAccessUrl", file.simplefinAccessUrl),
     mapping,
     cashSymbols: env.CASH_SYMBOLS

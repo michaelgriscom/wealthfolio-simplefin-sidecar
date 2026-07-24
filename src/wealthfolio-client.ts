@@ -1,12 +1,19 @@
 import type { SnapshotHoldingInput } from "./types";
 
-/** Minimal client for Wealthfolio's server REST API (cookie session auth). */
+/**
+ * Minimal client for Wealthfolio's server REST API.
+ */
 export class WealthfolioClient {
   private cookie: string | null = null;
 
   constructor(private readonly baseUrl: string) {}
 
-  async login(password: string): Promise<void> {
+  /** Establish a session. Without a password, assumes the server needs none. */
+  async login(password?: string): Promise<void> {
+    if (!password) {
+      this.cookie = null;
+      return;
+    }
     const res = await fetch(`${this.baseUrl}/api/v1/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -30,15 +37,23 @@ export class WealthfolioClient {
     cashBalances: Record<string, string>,
     snapshotDate: string,
   ): Promise<void> {
-    if (!this.cookie) throw new Error("WealthfolioClient.login() must be called first");
     const res = await fetch(`${this.baseUrl}/api/v1/snapshots`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Cookie: this.cookie },
+      headers: {
+        "Content-Type": "application/json",
+        ...(this.cookie ? { Cookie: this.cookie } : {}),
+      },
       body: JSON.stringify({ accountId, holdings, cashBalances, snapshotDate }),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      throw new Error(`saveSnapshot failed for ${accountId} (HTTP ${res.status}). ${body}`.trim());
+      const hint =
+        (res.status === 401 || res.status === 403) && !this.cookie
+          ? " Set WF_PASSWORD if this Wealthfolio server requires authentication."
+          : "";
+      throw new Error(
+        `saveSnapshot failed for ${accountId} (HTTP ${res.status}).${hint} ${body}`.trim(),
+      );
     }
   }
 }

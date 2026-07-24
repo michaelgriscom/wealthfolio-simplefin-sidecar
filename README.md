@@ -4,7 +4,7 @@
 
 - A self-hosted **Wealthfolio server** (3.5+) reachable over HTTP.
 - A SimpleFIN Bridge **access URL** (see below).
-- **⚠️ One Wealthfolio account per brokerage, set to *HOLDINGS* tracking mode. Currently, SimpleFIN does not supply sufficient information (e.g. ticker, share quantity) to support tracking mode.**
+- **⚠️ One Wealthfolio account per brokerage, set to *HOLDINGS* tracking mode.** Currently, SimpleFIN does not supply sufficient information (e.g. ticker, share quantity) to support tracking mode.
 
 ## Getting a SimpleFIN access URL
 
@@ -68,7 +68,7 @@ curl -s -u 'USER:PASS' 'https://bridge.simplefin.org/simplefin/accounts?balances
 | `WF_PASSWORD` | — (optional) | Wealthfolio login password. Omit if the server runs with `WF_AUTH_REQUIRED=false` |
 | `SYNC_AT` | `04:00` | Daily run time (24h local) |
 | `RUN_ON_START` | `false` | Sync once on startup |
-| `CASH_SYMBOLS` | built-in list | Comma-separated tickers to treat as cash. Prepopulated with money-market and sweep funds (VMFXX, SPAXX, FDRXX, etc). |
+| `CASH_SYMBOLS` | `VMFXX,VMRXX,SPAXX,SPRXX,FDRXX,FZFXX,SWVXX` | Comma-separated tickers to treat as cash. Prepopulated with money-market and sweep funds (VMFXX, SPAXX, FDRXX, etc). |
 | `EXCHANGE_MIC` | `XNAS` | Exchange for synced positions (also `exchangeMic` in the config file) |
 | `CONFIG_FILE` | `/config/config.json` | Path to the config file |
 | `PORT` | `8080` | Health/status/trigger HTTP port |
@@ -120,14 +120,10 @@ The container serves a tiny status/trigger API on `PORT` (default `8080`):
 
 Ensure that the mapped Wealthfolio account is set to **HOLDINGS** mode (Account settings → tracking mode).
 
-### `Wealthfolio login failed (HTTP 401)`
+### `HTTP 401`/`HTTP 403` errors
 
-`WF_PASSWORD` is wrong. If the Wealthfolio server runs with `WF_AUTH_REQUIRED=false`, unset
+Check that `WF_PASSWORD` is correct. If the Wealthfolio server runs with `WF_AUTH_REQUIRED=false`, unset
 the variable.
-
-### `saveSnapshot failed … (HTTP 401/403)`
-
-Check that `WF_PASSWORD` is correct.
 
 ## Development
 

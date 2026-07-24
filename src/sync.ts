@@ -36,6 +36,9 @@ export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult>
   const byId = new Map<string, SimpleFinAccount>(sf.accounts.map((a) => [a.id, a]));
 
   const wf = new WealthfolioClient(cfg.wfBaseUrl);
+  if (!cfg.wfPassword) {
+    log.info("WF_PASSWORD not set — connecting without authentication");
+  }
   await wf.login(cfg.wfPassword);
 
   for (const [wfAccountId, simplefinIds] of Object.entries(cfg.mapping)) {

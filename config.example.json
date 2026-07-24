@@ -1,11 +1,20 @@
+// Parsed as JSONC: comments and trailing commas are allowed. Account ids are
+// opaque on both sides, so label each entry — you will not remember which is
+// which later.
 {
   "simplefinAccessUrl": "https://USERNAME:PASSWORD@bridge.simplefin.org/simplefin",
   "exchangeMic": "XNAS",
+
+  // Wealthfolio account id -> the SimpleFIN account ids feeding it.
+  // Every Wealthfolio account listed here must use HOLDINGS tracking mode.
   "mapping": {
+    // Vanguard — Roth IRA
     "<wealthfolio-account-id>": ["<simplefin-account-id>"],
+
+    // Fidelity — HSA + 529 aggregated into a single Wealthfolio account
     "<another-wealthfolio-account-id>": [
-      "<simplefin-account-id>",
-      "<second-simplefin-account-id-to-aggregate>"
-    ]
-  }
+      "<simplefin-account-id>", // HSA
+      "<second-simplefin-account-id-to-aggregate>", // 529
+    ],
+  },
 }

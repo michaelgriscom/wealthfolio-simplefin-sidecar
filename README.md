@@ -106,6 +106,32 @@ services:
 docker run --rm … ghcr.io/michaelgriscom/wealthfolio-simplefin-sidecar:latest tsx src/main.ts --once
 ```
 
+### Crypto holdings (`cryptoSymbols`)
+
+SimpleFIN institution aggregators are not always able to string crypto
+tickers — SimpleFIN's Coinbase feed in particular reports each wallet as an
+account whose `balance` is the wallet's USD value while every `holding` has
+`market_value: 0`, and the ticker symbols are crypto tickers that do not
+resolve as equities. Without help this produces two visible bugs in
+Wealthfolio: the whole portfolio shows up as **cash**, and each crypto holding
+matches a wrong security (BTC -> the Grayscale Bitcoin ETF, BCH -> Banco de
+Chile, COMP -> Compass, Inc. ...).
+
+Two config knobs address this:
+
+- `cryptoSymbols`: tickers to sync as **CRYPTO** instruments
+  (`instrumentType: "CRYPTO"` + `quoteCcy: USD`). Wealthfolio keys these as
+  `CRYPTO:{BASE}/{QUOTE}` and prices them natively from market data (Yahoo
+  symbol `BTC-USD`), so ambiguous tickers (BCH, GRT, COMP, ...) resolve
+  correctly. Crypto positions intentionally get no `exchangeMic`.
+- Automatic cash fallback (no config needed): if an account has non-cash
+  holdings but *every* holding's `market_value` is 0, the account `balance` is
+  treated as embedded in the holdings — no cash is emitted and Wealthfolio
+  values the positions from market quotes.
+
+Note: the fallback fires only when the account *has* non-cash holdings; a
+plain USD wallet account with no holdings still contributes to cash as before.
+
 ## HTTP endpoints
 
 The container serves a tiny status/trigger API on `PORT` (default `8080`):

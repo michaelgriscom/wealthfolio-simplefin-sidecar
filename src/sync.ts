@@ -51,8 +51,14 @@ export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult>
       .filter((a): a is SimpleFinAccount => a !== undefined);
     if (sources.length === 0) continue;
 
-    const merged = aggregateSnapshots(sources.map((a) => mapAccountToSnapshot(a, cfg.cashSymbols)));
-    const positions = merged.positions.map((p) => ({ ...p, exchangeMic: cfg.exchangeMic }));
+    const merged = aggregateSnapshots(
+      sources.map((a) => mapAccountToSnapshot(a, cfg.cashSymbols, cfg.cryptoSymbols)),
+    );
+    const cryptoSet = new Set((cfg.cryptoSymbols ?? []).map((s) => s.toUpperCase()));
+    const positions = merged.positions.map((p) => ({
+      ...p,
+      exchangeMic: cryptoSet.has(p.symbol.toUpperCase()) ? undefined : cfg.exchangeMic,
+    }));
     try {
       await wf.saveSnapshot(wfAccountId, positions, merged.cashBalances, date);
       result.accountsSynced += 1;

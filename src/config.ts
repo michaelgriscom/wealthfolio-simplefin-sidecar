@@ -8,6 +8,13 @@ export interface SyncConfig {
   /** Wealthfolio account id -> list of SimpleFIN account ids to aggregate into it. */
   mapping: Record<string, string[]>;
   cashSymbols?: string[];
+  /**
+   * Tickers that are cryptocurrencies on the source institution. They are
+   * emitted as CRYPTO instruments (priced natively by Wealthfolio, e.g.
+   * BTC-USD) instead of equities on `exchangeMic`, which prevents wrong
+   * security matches for ambiguous tickers (BCH, GRT, COMP, ...).
+   */
+  cryptoSymbols?: string[];
   /** Daily run time, 24h "HH:MM" local. */
   syncAt: string;
   port: number;
@@ -19,6 +26,7 @@ interface FileConfig {
   simplefinAccessUrl?: string;
   mapping?: Record<string, string[]>;
   exchangeMic?: string;
+  cryptoSymbols?: string[];
 }
 
 function required(key: string, value: string | undefined): string {
@@ -56,6 +64,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SyncConfig {
     syncAt: env.SYNC_AT ?? "04:00",
     port: Number(env.PORT ?? "8080"),
     runOnStart: (env.RUN_ON_START ?? "false").toLowerCase() === "true",
+    cryptoSymbols: file.cryptoSymbols,
     exchangeMic: file.exchangeMic ?? env.EXCHANGE_MIC ?? "XNAS",
   };
 }

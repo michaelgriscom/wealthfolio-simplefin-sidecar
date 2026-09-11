@@ -53,13 +53,25 @@ function averageCost(holding: SimpleFinHolding): string | undefined {
  * Cash is computed as `accountBalance - marketValue(non-cash holdings)`, which
  * captures both money-market funds and any uninvested sweep balance not
  * reported as its own holding.
+ *
+ * Exception: if the account has non-cash holdings but every one of them lacks
+ * `market_value` (SimpleFIN's Coinbase aggregator reports crypto this way),
+ * the balance is treated as embedded in the holdings and no cash is emitted —
+ * Wealthfolio prices the assets itself.
+ *
+ * Symbols listed in `cryptoSymbols` become CRYPTO instruments
+ * (`instrumentType: "CRYPTO"` + `quoteCcy`) so Wealthfolio resolves them as
+ * crypto pairs (e.g. BTC -> CRYPTO:BTC/USD, priced as BTC-USD) instead of
+ * searching for an equity with the same ticker.
  */
 export function mapAccountToSnapshot(
   account: SimpleFinAccount,
   cashSymbols: string[] = DEFAULT_CASH_SYMBOLS,
+  cryptoSymbols: string[] = [],
 ): MappedSnapshot {
   const accountCurrency = normalizeCurrency(account.currency);
   const cashSet = new Set(cashSymbols.map((s) => s.toUpperCase()));
+  const cryptoSet = new Set(cryptoSymbols.map((s) => s.toUpperCase()));
   const holdings = account.holdings ?? [];
 
   const positions: SnapshotHoldingInput[] = [];
@@ -74,16 +86,29 @@ export function mapAccountToSnapshot(
     }
     nonCashMarketValue += toNumber(holding.market_value);
     const avg = averageCost(holding);
+    const isCrypto = cryptoSet.has(symbol.toUpperCase());
     positions.push({
       symbol,
       quantity: holding.shares ?? "0",
       currency: normalizeCurrency(holding.currency, accountCurrency),
+      // Crypto instruments are keyed as CRYPTO:{BASE}/{QUOTE} in Wealthfolio
+      // and priced natively by Yahoo as {BASE}-{QUOTE}. They must NOT carry an
+      // exchange MIC (the aggregator JSONC sets exchangeMic for securities).
+      ...(isCrypto ? { instrumentType: "CRYPTO", quoteCcy: normalizeCurrency(holding.currency, accountCurrency) } : {}),
       ...(avg !== undefined ? { averageCost: avg } : {}),
     });
   }
 
-  const cash = round2(toNumber(account.balance) - nonCashMarketValue);
   const cashBalances: Record<string, string> = {};
+  if (positions.length > 0 && nonCashMarketValue === 0 && toNumber(account.balance) > 0) {
+    // SimpleFIN reports balance but every holding's market_value is 0 (several
+    // aggregators, notably Coinbase, do this). The value of the account lives
+    // in its holdings, not in sweep cash — emit the positions and let
+    // Wealthfolio price them from market data.
+    return { positions, cashBalances };
+  }
+
+  const cash = round2(toNumber(account.balance) - nonCashMarketValue);
   if (cash > 0) cashBalances[accountCurrency] = String(cash);
 
   return { positions, cashBalances };

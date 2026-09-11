@@ -18,6 +18,8 @@ export function aggregateSnapshots(snapshots: MappedSnapshot[]): MappedSnapshot 
     weightedCost: number;
     hasCost: boolean;
     currency: string;
+    instrumentType?: string;
+    quoteCcy?: string;
   }
   const bySymbol = new Map<string, Agg>();
   const cash: Record<string, number> = {};
@@ -39,6 +41,8 @@ export function aggregateSnapshots(snapshots: MappedSnapshot[]): MappedSnapshot 
           weightedCost: Number.isFinite(avg) ? qty * avg : 0,
           hasCost: Number.isFinite(avg),
           currency: pos.currency,
+          instrumentType: pos.instrumentType,
+          quoteCcy: pos.quoteCcy,
         });
       }
     }
@@ -53,6 +57,8 @@ export function aggregateSnapshots(snapshots: MappedSnapshot[]): MappedSnapshot 
       symbol: agg.symbol,
       quantity: String(round(agg.quantity, 6)),
       currency: agg.currency,
+      ...(agg.instrumentType ? { instrumentType: agg.instrumentType } : {}),
+      ...(agg.quoteCcy ? { quoteCcy: agg.quoteCcy } : {}),
     };
     if (agg.hasCost && agg.quantity > 0) {
       pos.averageCost = String(round(agg.weightedCost / agg.quantity, 2));

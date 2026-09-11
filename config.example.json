@@ -5,6 +5,32 @@
   "simplefinAccessUrl": "https://USERNAME:PASSWORD@bridge.simplefin.org/simplefin",
   "exchangeMic": "XNAS",
 
+  // Tickers that are cryptocurrencies at the source institution. They are
+  // synced as CRYPTO instruments (Wealthfolio prices them as e.g. BTC-USD)
+  // instead of equities on `exchangeMic`, so ambiguous crypto tickers (BCH,
+  // GRT, COMP, ...) do not match wrong securities.
+  "cryptoSymbols": [
+    "BTC",
+    "ETH",
+    "BCH",
+    "XLM",
+    "GRT",
+    "USDC",
+    "FET",
+    "ZETA",
+    "NEAR",
+    "VET",
+    "AMP",
+    "CLV",
+    "RLY",
+    "SKL",
+    "FORTH",
+    "CGLD",
+    "COMP",
+    "NU",
+    "LTC",
+  ],
+
   // Wealthfolio account id -> the SimpleFIN account ids feeding it.
   // Every Wealthfolio account listed here must use HOLDINGS tracking mode.
   "mapping": {

@@ -164,18 +164,34 @@ describe("mapAccountToSnapshot", () => {
     });
   });
 
-  // BUG: costs are rounded to 2dp, so $0.0000085 per unit becomes "0".
-  test.todo("keeps sub-cent average costs", () => {
+  test("keeps sub-cent average costs", () => {
     const snap = mapAccountToSnapshot(
       account({
-        holdings: [holding("SHIB", { shares: "1000000", cost_basis: "8.5", market_value: "10" })],
+        holdings: [
+          holding("SHIB", { shares: "1000000", cost_basis: "8.5", market_value: "10" }),
+          holding("PENNY", { shares: "3", cost_basis: "1", market_value: "1" }),
+          holding("DUST", { shares: "1000000000", cost_basis: "0.5", market_value: "1" }),
+        ],
       }),
     );
-    assert.notEqual(snap.positions[0].averageCost, "0");
+    assert.deepEqual(
+      snap.positions.map((p) => p.averageCost),
+      ["0.0000085", "0.333333", "0.0000000005"],
+    );
   });
 });
 
 describe("aggregateSnapshots", () => {
+  test("keeps sub-cent average costs when merging", () => {
+    const merged = aggregateSnapshots(
+      ["0.000008", "0.000009"].map((averageCost) => ({
+        positions: [{ symbol: "SHIB", quantity: "1000000", currency: "USD", averageCost }],
+        cashBalances: {},
+      })),
+    );
+    assert.equal(merged.positions[0].averageCost, "0.0000085");
+  });
+
   test("the same ticker across accounts sums quantity and quantity-weights cost", () => {
     const merged = aggregateSnapshots([
       {

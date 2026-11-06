@@ -1,4 +1,4 @@
-import { inferCryptoAccounts, mapAccountToSnapshot, type CryptoScope } from "./mapping";
+import { mapAccountToSnapshot, type CryptoScope } from "./mapping";
 import { fetchAccounts, type SimpleFinAccount } from "./simplefin";
 import { aggregateSnapshots } from "./aggregate";
 import type { SyncConfig } from "./config";
@@ -40,32 +40,6 @@ export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult>
     if (!byId.has(id)) {
       log.warn(`cryptoAccounts lists ${id}, which SimpleFIN did not return; check the id`);
     }
-  }
-  if (cfg.cryptoSymbols?.length) {
-    const mappedIds = new Set(Object.values(cfg.mapping).flat());
-    const mapped = sf.accounts.filter((a) => mappedIds.has(a.id) && !cryptoAccounts.has(a.id));
-    for (const { id, scope, unlisted } of inferCryptoAccounts(mapped, cfg.cryptoSymbols, cfg.cashSymbols)) {
-      cryptoAccounts.set(id, scope);
-      if (scope === "all" && unlisted.length) {
-        log.warn(
-          `SimpleFIN account ${id} treated as all-crypto via cryptoSymbols, including ` +
-            `unlisted symbols [${unlisted.join(", ")}]`,
-        );
-      } else if (scope !== "all") {
-        log.warn(
-          `SimpleFIN account ${id} reports market values, so only [${scope.join(", ")}] ` +
-            `are treated as crypto via cryptoSymbols; if any of these are stocks, ` +
-            `remove them from this account in cryptoAccounts`,
-        );
-      }
-    }
-    log.warn(
-      cryptoAccounts.size
-        ? `config.cryptoSymbols is deprecated. Replace it with: ` +
-            `"cryptoAccounts": ${JSON.stringify(Object.fromEntries(cryptoAccounts))}`
-        : `config.cryptoSymbols is deprecated and matched no account this run; ` +
-            `list your crypto SimpleFIN accounts under "cryptoAccounts" instead`,
-    );
   }
 
   const wf = new WealthfolioClient(cfg.wfBaseUrl);

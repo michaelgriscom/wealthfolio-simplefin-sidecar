@@ -18,11 +18,6 @@ export interface SyncConfig {
    * COMP, ...) don't affect other accounts.
    */
   cryptoAccounts?: Record<string, CryptoScope>;
-  /**
-   * Deprecated: use `cryptoAccounts`. Applied to mapped accounts via
-   * `inferCryptoAccounts`.
-   */
-  cryptoSymbols?: string[];
   /** Daily run time, 24h "HH:MM" local. */
   syncAt: string;
   port: number;
@@ -35,7 +30,6 @@ interface FileConfig {
   mapping?: Record<string, string[]>;
   exchangeMic?: string;
   cryptoAccounts?: unknown;
-  cryptoSymbols?: unknown;
 }
 
 function stringArray(key: string, value: unknown): string[] | undefined {
@@ -105,7 +99,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SyncConfig {
     port: Number(env.PORT ?? "8080"),
     runOnStart: (env.RUN_ON_START ?? "false").toLowerCase() === "true",
     cryptoAccounts: cryptoAccounts(file.cryptoAccounts),
-    cryptoSymbols: stringArray("cryptoSymbols", file.cryptoSymbols),
     exchangeMic: file.exchangeMic ?? env.EXCHANGE_MIC ?? "XNAS",
   };
 }

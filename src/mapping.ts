@@ -35,64 +35,6 @@ export interface MapOptions {
   crypto?: CryptoScope;
 }
 
-export interface InferredCryptoAccount {
-  id: string;
-  scope: CryptoScope;
-  /** For `scope: "all"`: non-cash symbols that aren't in `cryptoSymbols`. */
-  unlisted: string[];
-}
-
-/**
- * Legacy `cryptoSymbols` support: infer each account's crypto scope.
- *  - An account that holds at least one listed symbol and reports no market
- *    values (the shape of SimpleFIN's Coinbase feed) is `"all"` crypto, so an
- *    unlisted coin doesn't stop it from qualifying.
- *  - Any other account holding listed symbols gets just those symbols as
- *    crypto — PR #5's original per-ticker behaviour, kept so mixed accounts
- *    still work. The caller warns, since a stock sharing a crypto ticker
- *    (AMP, ZETA, ...) is misclassified this way.
- */
-export function inferCryptoAccounts(
-  accounts: SimpleFinAccount[],
-  cryptoSymbols: string[],
-  cashSymbols: string[] = DEFAULT_CASH_SYMBOLS,
-): InferredCryptoAccount[] {
-  const crypto = new Set(cryptoSymbols.map((s) => s.toUpperCase()));
-  const cash = new Set(cashSymbols.map((s) => s.toUpperCase()));
-  const result: InferredCryptoAccount[] = [];
-  for (const account of accounts) {
-    const holdings = (account.holdings ?? []).filter((h) => {
-      const s = (h.symbol ?? "").trim().toUpperCase();
-      return s && !cash.has(s);
-    });
-    const symbols = holdings.map((h) => h.symbol.trim().toUpperCase());
-    const anyListed = symbols.some((s) => crypto.has(s));
-    const anyPriced = holdings.some((h) => toNumber(h.market_value) > 0);
-    if (!anyListed) continue;
-    if (!anyPriced) {
-      result.push({ id: account.id, scope: "all", unlisted: symbols.filter((s) => !crypto.has(s)) });
-    } else {
-      const listed = [...new Set(symbols.filter((s) => crypto.has(s)))];
-      result.push({ id: account.id, scope: listed, unlisted: [] });
-    }
-  }
-  return result;
-}
-
-/**
- * Fiat currencies accepted as a crypto quote/cash currency. A crypto feed's
- * `currency` can itself be a 3-letter coin code (e.g. "BTC"), which would
- * otherwise produce pairs like CRYPTO:BTC/BTC.
- */
-const FIAT_CURRENCIES = new Set([
-  "USD", "EUR", "GBP", "CAD", "AUD", "NZD", "JPY", "CHF", "SEK", "NOK", "DKK",
-  "SGD", "HKD", "CNY", "INR", "KRW", "MXN", "BRL", "ZAR", "PLN", "CZK", "ILS",
-]);
-
-function fiatOr(currency: string, fallback: string): string {
-  return FIAT_CURRENCIES.has(currency) ? currency : fallback;
-}
-
 /** Normalize a SimpleFIN currency value to a 3-letter ISO code, with a fallback. */
 export function normalizeCurrency(currency: string | undefined, fallback = "USD"): string {
   if (!currency) return fallback;
@@ -143,8 +85,7 @@ export function mapAccountToSnapshot(
   const { cashSymbols = DEFAULT_CASH_SYMBOLS, crypto } = options;
   const cryptoSet = Array.isArray(crypto) ? new Set(crypto.map((s) => s.toUpperCase())) : null;
   const isCrypto = (symbol: string) => crypto === "all" || (cryptoSet?.has(symbol.toUpperCase()) ?? false);
-  const rawAccountCurrency = normalizeCurrency(account.currency);
-  const accountCurrency = crypto ? fiatOr(rawAccountCurrency, "USD") : rawAccountCurrency;
+  const accountCurrency = normalizeCurrency(account.currency);
   const cashSet = new Set(cashSymbols.map((s) => s.toUpperCase()));
   const holdings = account.holdings ?? [];
 
@@ -165,8 +106,7 @@ export function mapAccountToSnapshot(
     // didn't price it. Zero-share dust/closed positions don't count.
     if (holdingIsCrypto && marketValue <= 0 && toNumber(holding.shares) > 0) missingMarketValue += 1;
     nonCashMarketValue += marketValue;
-    const holdingCurrency = normalizeCurrency(holding.currency, accountCurrency);
-    const currency = holdingIsCrypto ? fiatOr(holdingCurrency, accountCurrency) : holdingCurrency;
+    const currency = normalizeCurrency(holding.currency, accountCurrency);
     const avg = averageCost(holding);
     positions.push({
       symbol,

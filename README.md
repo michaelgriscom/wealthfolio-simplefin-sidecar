@@ -130,9 +130,8 @@ crypto holdings in those accounts:
 - They are synced as **CRYPTO** instruments (`instrumentType: "CRYPTO"` +
   `quoteCcy`, no `exchangeMic`). Wealthfolio keys these as
   `CRYPTO:{BASE}/{QUOTE}` and prices them from market data (Yahoo symbol
-  `BTC-USD`). The quote currency is always fiat (USD unless the feed reports
-  another fiat currency). The setting is scoped per account because many
-  crypto tickers are also stock tickers (AMP, ZETA, NEAR, ...).
+  `BTC-USD`). The setting is scoped per account because many crypto tickers
+  are also stock tickers (AMP, ZETA, NEAR, ...).
 - If any held coin (shares > 0) has no `market_value`, the balance can't be
   split into holdings vs. cash, so **no cash is synced** for that account and
   a warning is logged. This means fiat cash held in the same account is not
@@ -141,22 +140,7 @@ crypto holdings in those accounts:
 Tickers Wealthfolio's market data doesn't know (renamed or delisted coins,
 such as Coinbase's `CGLD` for Celo) will sync without a price.
 
-Accounts not listed in `cryptoAccounts` are mapped exactly as before. (An
-earlier draft also skipped cash automatically for any account whose holdings
-had no market values; that no longer happens outside `cryptoAccounts`.)
-
-**Migrating from `cryptoSymbols`:** the older `cryptoSymbols` ticker list is
-still accepted but deprecated. For each mapped account holding a listed
-ticker:
-
-- If none of its holdings report a market value (how SimpleFIN's Coinbase
-  feed looks), the whole account is treated as crypto, including any unlisted
-  coins (which are logged).
-- Otherwise only the listed tickers in that account are treated as crypto,
-  and a warning is logged, since a stock sharing a crypto ticker would be
-  misclassified.
-
-Each sync logs the `"cryptoAccounts": {...}` value to paste in its place.
+Accounts not listed in `cryptoAccounts` are mapped exactly as before.
 
 ## HTTP endpoints
 

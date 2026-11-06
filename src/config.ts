@@ -9,12 +9,13 @@ export interface SyncConfig {
   mapping: Record<string, string[]>;
   cashSymbols?: string[];
   /**
-   * Tickers that are cryptocurrencies on the source institution. They are
-   * emitted as CRYPTO instruments (priced natively by Wealthfolio, e.g.
-   * BTC-USD) instead of equities on `exchangeMic`, which prevents wrong
-   * security matches for ambiguous tickers (BCH, GRT, COMP, ...).
+   * SimpleFIN account ids whose holdings are all cryptocurrencies (e.g.
+   * Coinbase wallets). Their holdings are emitted as CRYPTO instruments
+   * (priced natively by Wealthfolio, e.g. BTC-USD) instead of equities on
+   * `exchangeMic`. Scoped per account so crypto tickers that collide with
+   * stock tickers (AMP, ZETA, COMP, ...) don't affect brokerage accounts.
    */
-  cryptoSymbols?: string[];
+  cryptoAccounts?: string[];
   /** Daily run time, 24h "HH:MM" local. */
   syncAt: string;
   port: number;
@@ -26,7 +27,15 @@ interface FileConfig {
   simplefinAccessUrl?: string;
   mapping?: Record<string, string[]>;
   exchangeMic?: string;
-  cryptoSymbols?: string[];
+  cryptoAccounts?: unknown;
+}
+
+function stringArray(key: string, value: unknown): string[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || !value.every((v) => typeof v === "string")) {
+    throw new Error(`config.${key} must be an array of strings`);
+  }
+  return value;
 }
 
 function required(key: string, value: string | undefined): string {
@@ -64,7 +73,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SyncConfig {
     syncAt: env.SYNC_AT ?? "04:00",
     port: Number(env.PORT ?? "8080"),
     runOnStart: (env.RUN_ON_START ?? "false").toLowerCase() === "true",
-    cryptoSymbols: file.cryptoSymbols,
+    cryptoAccounts: stringArray("cryptoAccounts", file.cryptoAccounts),
     exchangeMic: file.exchangeMic ?? env.EXCHANGE_MIC ?? "XNAS",
   };
 }

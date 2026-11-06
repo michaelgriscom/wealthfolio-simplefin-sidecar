@@ -3,22 +3,40 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    # renovate/** so branch automerge has a check to gate on. A Renovate PR
+    # also triggers pull_request; the duplicate run is harmless.
+    branches: [main, 'renovate/**']
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
-      - run: npm install
+      # Lockfile-exact, and no dependency install scripts (esbuild, via tsx,
+      # works without its postinstall).
+      - run: npm ci --ignore-scripts
 
       - name: Type-check
         run: npm run type-check
 
+      - name: Test
+        run: npm test
+
       - name: Docker build
         run: docker build -t wealthfolio-simplefin-sidecar:ci .
+
+      # tsx comes from the image's lockfile install; check it runs TypeScript.
+      - name: Docker smoke test
+        run: |
+          docker run --rm wealthfolio-simplefin-sidecar:ci tsx -e "const n: number = 1; console.log(n)"

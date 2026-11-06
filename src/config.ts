@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { parseJsonc } from "./jsonc";
+import type { CryptoScope } from "./mapping";
 
 export interface SyncConfig {
   wfBaseUrl: string;
@@ -9,12 +10,14 @@ export interface SyncConfig {
   mapping: Record<string, string[]>;
   cashSymbols?: string[];
   /**
-   * Tickers that are cryptocurrencies on the source institution. They are
-   * emitted as CRYPTO instruments (priced natively by Wealthfolio, e.g.
-   * BTC-USD) instead of equities on `exchangeMic`, which prevents wrong
-   * security matches for ambiguous tickers (BCH, GRT, COMP, ...).
+   * SimpleFIN account id -> which of its holdings are crypto: "all" (e.g. a
+   * Coinbase account) or a list of tickers (an account holding stocks and
+   * coins). Crypto holdings are emitted as CRYPTO instruments (priced natively
+   * by Wealthfolio, e.g. BTC-USD) instead of equities on `exchangeMic`. Scoped
+   * per account so crypto tickers that collide with stock tickers (AMP, ZETA,
+   * COMP, ...) don't affect other accounts.
    */
-  cryptoSymbols?: string[];
+  cryptoAccounts?: Record<string, CryptoScope>;
   /** Daily run time, 24h "HH:MM" local. */
   syncAt: string;
   port: number;
@@ -26,12 +29,58 @@ interface FileConfig {
   simplefinAccessUrl?: string;
   mapping?: Record<string, string[]>;
   exchangeMic?: string;
-  cryptoSymbols?: string[];
+  cryptoAccounts?: unknown;
+}
+
+function stringArray(key: string, value: unknown): string[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || !value.every((v) => typeof v === "string")) {
+    throw new Error(`config.${key} must be an array of strings`);
+  }
+  return value;
+}
+
+/**
+ * `cryptoAccounts` accepts a list of account ids (each meaning "all") or an
+ * object of account id -> "all" | ticker list.
+ */
+function cryptoAccounts(value: unknown): Record<string, CryptoScope> | undefined {
+  if (value === undefined) return undefined;
+  if (Array.isArray(value)) {
+    const ids = stringArray("cryptoAccounts", value) ?? [];
+    return Object.fromEntries(ids.map((id) => [id, "all" as const]));
+  }
+  const err = new Error(
+    'config.cryptoAccounts must be a list of account ids, or an object of account id -> "all" or a list of tickers',
+  );
+  if (typeof value !== "object" || value === null) throw err;
+  const out: Record<string, CryptoScope> = {};
+  for (const [id, scope] of Object.entries(value)) {
+    if (scope === "all") out[id] = "all";
+    else if (Array.isArray(scope) && scope.every((s) => typeof s === "string")) out[id] = scope;
+    else throw err;
+  }
+  return out;
 }
 
 function required(key: string, value: string | undefined): string {
   if (!value) throw new Error(`Missing required config: ${key}`);
   return value;
+}
+
+function syncAt(value: string): string {
+  if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(value)) {
+    throw new Error(`SYNC_AT must be a 24h "HH:MM" time, got "${value}"`);
+  }
+  return value;
+}
+
+function port(value: string): number {
+  const n = Number(value);
+  if (!/^\d+$/.test(value) || n < 1 || n > 65535) {
+    throw new Error(`PORT must be an integer from 1 to 65535, got "${value}"`);
+  }
+  return n;
 }
 
 /**
@@ -52,6 +101,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SyncConfig {
   if (Object.keys(mapping).length === 0) {
     throw new Error("config.mapping is empty — nothing to sync");
   }
+  for (const [wfId, sfIds] of Object.entries(mapping)) {
+    if (!Array.isArray(sfIds) || !sfIds.every((id) => typeof id === "string")) {
+      throw new Error(`config.mapping["${wfId}"] must be a list of SimpleFIN account ids`);
+    }
+  }
 
   return {
     wfBaseUrl: (env.WF_BASE_URL ?? "http://wealthfolio:8088").replace(/\/+$/, ""),
@@ -61,10 +115,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SyncConfig {
     cashSymbols: env.CASH_SYMBOLS
       ? env.CASH_SYMBOLS.split(",").map((s) => s.trim()).filter(Boolean)
       : undefined,
-    syncAt: env.SYNC_AT ?? "04:00",
-    port: Number(env.PORT ?? "8080"),
+    syncAt: syncAt(env.SYNC_AT?.trim() || "04:00"),
+    port: port(env.PORT?.trim() || "8080"),
     runOnStart: (env.RUN_ON_START ?? "false").toLowerCase() === "true",
-    cryptoSymbols: file.cryptoSymbols,
+    cryptoAccounts: cryptoAccounts(file.cryptoAccounts),
     exchangeMic: file.exchangeMic ?? env.EXCHANGE_MIC ?? "XNAS",
   };
 }

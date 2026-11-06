@@ -21,11 +21,14 @@
     "start": "tsx src/main.ts",
     "sync:once": "tsx src/main.ts --once",
     "claim": "tsx src/claim.ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "node --import tsx --test src/*.test.ts"
+  },
+  "dependencies": {
+    "tsx": "^4.19.2"
   },
   "devDependencies": {
     "@types/node": "^20.19.33",
-    "tsx": "^4.19.2",
     "typescript": "^5.9.3"
   }
 }

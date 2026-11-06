@@ -3,3 +3,4 @@ node_modules
 .github
 *.tsbuildinfo
 config.json
+src/**/*.test.ts

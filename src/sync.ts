@@ -1,4 +1,4 @@
-import { mapAccountToSnapshot } from "./mapping";
+import { mapAccountToSnapshot, type CryptoScope } from "./mapping";
 import { fetchAccounts, type SimpleFinAccount } from "./simplefin";
 import { aggregateSnapshots } from "./aggregate";
 import type { SyncConfig } from "./config";
@@ -11,7 +11,6 @@ export interface Logger {
 }
 
 export interface SyncResult {
-  date: string;
   finishedAt: string;
   accountsSynced: number;
   accountsFailed: number;
@@ -21,9 +20,7 @@ export interface SyncResult {
 
 /** Run a full sync: pull SimpleFIN holdings and write a snapshot per mapped Wealthfolio account. */
 export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult> {
-  const date = new Date().toISOString().slice(0, 10);
   const result: SyncResult = {
-    date,
     finishedAt: "",
     accountsSynced: 0,
     accountsFailed: 0,
@@ -34,6 +31,13 @@ export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult>
   const sf = await fetchAccounts(cfg.simplefinAccessUrl);
   for (const e of sf.errors ?? []) log.warn(`SimpleFIN connection warning: ${e}`);
   const byId = new Map<string, SimpleFinAccount>(sf.accounts.map((a) => [a.id, a]));
+
+  const cryptoAccounts = new Map<string, CryptoScope>(Object.entries(cfg.cryptoAccounts ?? {}));
+  for (const id of cryptoAccounts.keys()) {
+    if (!byId.has(id)) {
+      log.warn(`cryptoAccounts lists ${id}, which SimpleFIN did not return; check the id`);
+    }
+  }
 
   const wf = new WealthfolioClient(cfg.wfBaseUrl);
   if (!cfg.wfPassword) {
@@ -51,16 +55,17 @@ export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult>
       .filter((a): a is SimpleFinAccount => a !== undefined);
     if (sources.length === 0) continue;
 
-    const merged = aggregateSnapshots(
-      sources.map((a) => mapAccountToSnapshot(a, cfg.cashSymbols, cfg.cryptoSymbols)),
+    const snapshots = sources.map((a) =>
+      mapAccountToSnapshot(a, { cashSymbols: cfg.cashSymbols, crypto: cryptoAccounts.get(a.id) }),
     );
-    const cryptoSet = new Set((cfg.cryptoSymbols ?? []).map((s) => s.toUpperCase()));
-    const positions = merged.positions.map((p) => ({
-      ...p,
-      exchangeMic: cryptoSet.has(p.symbol.toUpperCase()) ? undefined : cfg.exchangeMic,
-    }));
+    for (const w of snapshots.flatMap((s) => s.warnings ?? [])) log.warn(w);
+    const merged = aggregateSnapshots(snapshots);
+    // Crypto instruments must not carry an exchange MIC.
+    const positions = merged.positions.map((p) =>
+      p.instrumentType === "CRYPTO" ? p : { ...p, exchangeMic: cfg.exchangeMic },
+    );
     try {
-      await wf.saveSnapshot(wfAccountId, positions, merged.cashBalances, date);
+      await wf.saveSnapshot(wfAccountId, positions, merged.cashBalances);
       result.accountsSynced += 1;
       log.info(
         `Snapshot saved for ${wfAccountId}: ${merged.positions.length} positions, ` +

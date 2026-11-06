@@ -3,6 +3,7 @@ import { fetchAccounts, type SimpleFinAccount } from "./simplefin";
 import { aggregateSnapshots } from "./aggregate";
 import type { SyncConfig } from "./config";
 import { WealthfolioClient } from "./wealthfolio-client";
+import { localDate } from "./schedule";
 
 export interface Logger {
   info(msg: string): void;
@@ -21,7 +22,7 @@ export interface SyncResult {
 
 /** Run a full sync: pull SimpleFIN holdings and write a snapshot per mapped Wealthfolio account. */
 export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult> {
-  const date = new Date().toISOString().slice(0, 10);
+  const date = localDate();
   const result: SyncResult = {
     date,
     finishedAt: "",

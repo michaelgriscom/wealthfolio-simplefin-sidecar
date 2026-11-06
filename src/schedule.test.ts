@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { msUntilNext } from "./schedule";
+import { localDate, msUntilNext } from "./schedule";
 
 // msUntilNext uses local time, so pin a zone with DST. Node applies TZ set at
 // runtime, and each test file runs in its own process.
@@ -35,3 +35,11 @@ test("follows local time across a DST change", () => {
   assert.equal(msUntilNext("04:00", now), 23 * HOUR);
 });
 
+
+test("the snapshot date is the local date, not the UTC date", () => {
+  // 22:30 on Jan 14 in New York is already Jan 15 in UTC.
+  const now = new Date("2026-01-15T03:30:00Z");
+  assert.equal(now.toISOString().slice(0, 10), "2026-01-15");
+  assert.equal(localDate(now), "2026-01-14");
+  assert.equal(localDate(new Date(2026, 8, 5, 0, 0)), "2026-09-05");
+});

@@ -48,8 +48,8 @@ allowed.
 ```
 
 Each Wealthfolio account maps to one or more SimpleFIN accounts; multiple sources are
-**aggregated** (duplicate tickers summed with quantity-weighted average cost, cash
-summed per currency).
+**aggregated** (positions with the same ticker and type summed with
+quantity-weighted average cost, cash summed per currency).
 
 To find the IDs: SimpleFIN account IDs come from the bridge's `/accounts` response;
 Wealthfolio account IDs come from its API or app. To list SimpleFIN accounts with
@@ -132,9 +132,9 @@ crypto holdings in those accounts:
   `CRYPTO:{BASE}/{QUOTE}` and prices them from market data (Yahoo symbol
   `BTC-USD`). The setting is scoped per account because many crypto tickers
   are also stock tickers (AMP, ZETA, NEAR, ...).
-- If any held coin (shares > 0) has no `market_value`, the balance can't be
-  split into holdings vs. cash, so **no cash is synced** for that account and
-  a warning is logged. This means fiat cash held in the same account is not
+- If any held coin (shares > 0) has an empty or zero `market_value`, the
+  balance can't be split into holdings vs. cash, so **no cash is synced** for
+  that account and a warning is logged. This means fiat cash held in the same account is not
   synced. Accounts with no holdings still sync their balance as cash.
 
 Tickers Wealthfolio's market data doesn't know (renamed or delisted coins,

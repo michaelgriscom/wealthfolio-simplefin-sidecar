@@ -1,0 +1,88 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigestsToSemver"
+  ],
+  "reviewers": [
+    "michaelgriscom"
+  ],
+  "assignees": [
+    "michaelgriscom"
+  ],
+  "dependencyDashboard": true,
+
+  "description": [
+    "Weekly, batched. Non-major updates automerge once 7 days old and CI (type-check,",
+    "Docker build) is green; majors stay manual.",
+    "What runs is the node image plus tsx (and its esbuild), installed from the lockfile:",
+    "those are fix(deps) and cut a release; dev tooling is chore(deps)."
+  ],
+
+  "timezone": "America/New_York",
+  "schedule": ["* 0-4 * * 1"],
+  "prConcurrentLimit": 5,
+  "semanticCommits": "enabled",
+
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "vulnerabilityAlerts": {
+    "description": "Security fixes skip the schedule, but not all the soak: Renovate's default drops minimumReleaseAge to none here.",
+    "minimumReleaseAge": "3 days"
+  },
+
+  "automerge": false,
+  "platformAutomerge": false,
+  "ignoreTests": false,
+
+  "packageRules": [
+    {
+      "description": "Non-major updates merge themselves once minimumReleaseAge has passed and CI is green. automergeType branch: Renovate tests the renovate/* branch and fast-forwards main without opening a PR, so CI's push run is the only check (the PR-title lint never runs). Renovate's own renovate/* statuses don't count, so if CI doesn't run the branch stays pending and nothing merges. prNotPendingHours is raised because a PR opened after the default 25 pending hours would also be automerged, on the title lint alone.",
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "automerge": true,
+      "automergeType": "branch",
+      "prNotPendingHours": 8760
+    },
+    {
+      "description": "GitHub Actions never automerge (pins, version bumps or digests). Tag dates are set by the action's author, so the age gate means little, and actions run with write tokens and the release PAT. A stale pin is fine.",
+      "matchManagers": ["github-actions"],
+      "automerge": false
+    },
+    {
+      "description": "Bump ranges so package.json states the version that is locked and shipped, not just the lockfile. npm only: on Docker it would pin exact tags.",
+      "matchManagers": ["npm"],
+      "rangeStrategy": "bump"
+    },
+    {
+      "description": "Pin the node image digest. Docker Hub often gives no release timestamp; don't hold those updates forever.",
+      "matchDatasources": ["docker"],
+      "pinDigests": true,
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
+    {
+      "description": "One PR for non-major dev tooling. tsx has its own group below.",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "non-major dev dependencies"
+    },
+    {
+      "description": "tsx runs the sidecar in the image, with esbuild under it (esbuild only appears in security fixes, as a transitive). fix(deps) so release-please ships a new image; non-major still automerges.",
+      "matchPackageNames": ["tsx", "esbuild"],
+      "groupName": "tsx",
+      "semanticCommitType": "fix"
+    },
+    {
+      "description": "Base image, actions/setup-node and @types/node together. fix(deps) because the image is the runtime.",
+      "matchDepNames": ["node", "@types/node"],
+      "groupName": "Node.js",
+      "semanticCommitType": "fix"
+    },
+    {
+      "description": "Majors soak longer.",
+      "matchUpdateTypes": ["major"],
+      "minimumReleaseAge": "14 days",
+      "addLabels": ["major-update"]
+    }
+  ]
+}

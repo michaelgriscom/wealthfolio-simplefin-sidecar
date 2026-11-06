@@ -1,22 +1,41 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "Only keep the Docker base image patched. Updates merge on their own once CI passes.",
-  "extends": ["config:recommended"],
-  "enabledManagers": ["dockerfile"],
+  "extends": [
+    "config:recommended"
+  ],
+  "enabledManagers": [
+    "dockerfile"
+  ],
   "dependencyDashboard": false,
   "timezone": "America/New_York",
-  "schedule": ["before 5am on monday"],
+  "schedule": [
+    "before 5am on monday"
+  ],
+  "semanticCommits": "enabled",
+  "pinDigests": true,
   "packageRules": [
     {
-      "matchDatasources": ["docker"],
-      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest",
+        "pin",
+        "pinDigest"
+      ],
       "semanticCommitType": "fix",
-      "minimumReleaseAge": "3 days",
-      "minimumReleaseAgeBehaviour": "timestamp-optional",
       "automerge": true,
       "automergeType": "branch",
-      "prNotPendingHours": 8760, "pinDigests": true
+      "prNotPendingHours": 8760
     },
-    { "matchUpdateTypes": ["major"], "enabled": false }
+    {
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    }
   ]
 }

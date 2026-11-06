@@ -30,12 +30,14 @@ export class WealthfolioClient {
     this.cookie = setCookie.split(";")[0];
   }
 
-  /** Save a dated holdings snapshot for a HOLDINGS-mode account. */
+  /**
+   * Save a holdings snapshot for a HOLDINGS-mode account. No date is sent, so
+   * Wealthfolio dates it "today" in its own timezone.
+   */
   async saveSnapshot(
     accountId: string,
     holdings: SnapshotHoldingInput[],
     cashBalances: Record<string, string>,
-    snapshotDate: string,
   ): Promise<void> {
     const res = await fetch(`${this.baseUrl}/api/v1/snapshots`, {
       method: "POST",
@@ -43,7 +45,7 @@ export class WealthfolioClient {
         "Content-Type": "application/json",
         ...(this.cookie ? { Cookie: this.cookie } : {}),
       },
-      body: JSON.stringify({ accountId, holdings, cashBalances, snapshotDate }),
+      body: JSON.stringify({ accountId, holdings, cashBalances }),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");

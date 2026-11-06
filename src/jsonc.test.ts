@@ -56,13 +56,9 @@ test("commas inside strings that look trailing are kept", () => {
 });
 
 test("line numbers survive comment stripping so parse errors point at the right line", () => {
-  const text = '{\n  // comment\n  /* block\n  */\n  "a": oops\n}';
-  assert.throws(() => parseJsonc(text), (e: Error) => {
-    assert.ok(e instanceof SyntaxError);
-    // Node reports "line 5" for the bad token; tolerate engines that report only a position.
-    if (/line \d+/.test(e.message)) assert.match(e.message, /line 5/);
-    return true;
-  });
+  // The missing comma after `"a": 1` is reported against `"b"` on line 6.
+  const text = '{\n  // comment\n  /* block\n  */\n  "a": 1\n  "b": 2\n}';
+  assert.throws(() => parseJsonc(text), /\(line 6 column 3\)/);
 });
 
 test("genuinely invalid JSON still throws", () => {

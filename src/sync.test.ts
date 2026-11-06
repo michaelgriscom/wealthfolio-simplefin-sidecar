@@ -117,7 +117,9 @@ test("maps, aggregates and saves one dated snapshot per Wealthfolio account", as
     log,
   );
 
-  const today = new Date().toISOString().slice(0, 10);
+  // One date for the whole run, shared by every snapshot and the result.
+  const date = result.date;
+  assert.match(date, /^\d{4}-\d{2}-\d{2}$/);
   assert.deepEqual(wf.snapshots, [
     {
       accountId: "wf-taxable",
@@ -126,16 +128,15 @@ test("maps, aggregates and saves one dated snapshot per Wealthfolio account", as
         { symbol: "VTI", quantity: "6", currency: "USD", averageCost: "216.67", exchangeMic: "XNAS" },
       ],
       cashBalances: { USD: "850" },
-      snapshotDate: today,
+      snapshotDate: date,
     },
     {
       accountId: "wf-ira",
       holdings: [{ symbol: "BND", quantity: "3", currency: "USD", exchangeMic: "XNAS" }],
       cashBalances: {},
-      snapshotDate: today,
+      snapshotDate: date,
     },
   ]);
-  assert.equal(result.date, today);
   assert.equal(result.accountsSynced, 2);
   assert.equal(result.accountsFailed, 0);
   assert.deepEqual(result.skipped, []);

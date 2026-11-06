@@ -59,7 +59,7 @@ test("a rejected login throws with the status", async () => {
   await assert.rejects(new WealthfolioClient(BASE).login("wrong"), /login failed \(HTTP 401\)/);
 });
 
-test("a successful login without a cookie is treated as an error", async () => {
+test("a login with no cookie throws", async () => {
   mockFetch(() => new Response(null, { status: 200 }));
   await assert.rejects(new WealthfolioClient(BASE).login("pw"), /no session cookie/);
 });
@@ -90,7 +90,7 @@ test("an auth failure without a password hints at WF_PASSWORD", async () => {
   );
 });
 
-test("an auth failure with a session doesn't suggest setting WF_PASSWORD", async () => {
+test("an auth failure with a session omits the WF_PASSWORD hint", async () => {
   mockFetch((url) =>
     url.endsWith("/auth/login")
       ? new Response(null, { headers: { "set-cookie": "s=1" } })

@@ -58,14 +58,14 @@ describe("mapAccountToSnapshot", () => {
     for (const p of snap.positions) assert.equal(p.averageCost, undefined, p.symbol);
   });
 
-  test("quantity is passed through as the original string (no float rounding)", () => {
+  test("quantity is passed through as a string", () => {
     const snap = mapAccountToSnapshot(
       account({ holdings: [holding("FXAIX", { shares: "12.345678901" })] }),
     );
     assert.equal(snap.positions[0].quantity, "12.345678901");
   });
 
-  test("a holding missing shares gets quantity 0 rather than being dropped", () => {
+  test("a holding without shares gets quantity 0", () => {
     const snap = mapAccountToSnapshot(account({ holdings: [holding("VTI")] }));
     assert.deepEqual(snap.positions, [{ symbol: "VTI", quantity: "0", currency: "USD" }]);
   });
@@ -74,8 +74,8 @@ describe("mapAccountToSnapshot", () => {
     const snap = mapAccountToSnapshot(
       account({
         currency: "cad",
-        // XEQT has a market value so cash is derived from the balance on every
-        // branch (#5 treats "no holding has a market value" as all-invested).
+        // XEQT has a market value so cash is derived on main, #5 and #6.
+        // #5 emits no cash when no holding has a market value.
         balance: "110",
         holdings: [
           holding("XEQT", { currency: "cad", market_value: "10" }),
@@ -112,11 +112,11 @@ describe("mapAccountToSnapshot", () => {
       snap.positions.map((p) => p.symbol),
       ["VTI"],
     );
-    // Skipped holdings aren't subtracted, so their value stays in cash rather than vanishing.
+    // Skipped holdings aren't subtracted, so their value counts as cash.
     assert.deepEqual(snap.cashBalances, { USD: "300" });
   });
 
-  test("money-market funds match case-insensitively and combine with uninvested sweep cash", () => {
+  test("money-market funds fold into cash, case-insensitively", () => {
     const snap = mapAccountToSnapshot(
       account({
         balance: "10250.75",
@@ -135,7 +135,7 @@ describe("mapAccountToSnapshot", () => {
     assert.deepEqual(snap.cashBalances, { USD: "7750.75" });
   });
 
-  test("cash is rounded to cents, not left with float noise", () => {
+  test("cash is rounded to cents", () => {
     const snap = mapAccountToSnapshot(
       account({
         balance: "1000.10",
@@ -148,7 +148,7 @@ describe("mapAccountToSnapshot", () => {
     assert.deepEqual(snap.cashBalances, { USD: "333.44" });
   });
 
-  test("no cash entry when holdings exactly match or exceed the balance", () => {
+  test("no cash entry when holdings are at or above the balance", () => {
     for (const balance of ["1000", "999.99", "-250"]) {
       const snap = mapAccountToSnapshot(
         account({ balance, holdings: [holding("VTI", { market_value: "1000" })] }),
@@ -164,17 +164,15 @@ describe("mapAccountToSnapshot", () => {
     });
   });
 
-  test.todo(
-    "sub-cent average costs survive — today they round to '0' (e.g. a coin bought at $0.0000085)",
-    () => {
-      const snap = mapAccountToSnapshot(
-        account({
-          holdings: [holding("SHIB", { shares: "1000000", cost_basis: "8.5", market_value: "10" })],
-        }),
-      );
-      assert.notEqual(snap.positions[0].averageCost, "0");
-    },
-  );
+  // BUG: costs are rounded to 2dp, so $0.0000085 per unit becomes "0".
+  test.todo("keeps sub-cent average costs", () => {
+    const snap = mapAccountToSnapshot(
+      account({
+        holdings: [holding("SHIB", { shares: "1000000", cost_basis: "8.5", market_value: "10" })],
+      }),
+    );
+    assert.notEqual(snap.positions[0].averageCost, "0");
+  });
 });
 
 describe("aggregateSnapshots", () => {
@@ -238,7 +236,7 @@ describe("aggregateSnapshots", () => {
     );
   });
 
-  test("summed quantities are rounded to 6dp to remove float noise", () => {
+  test("summed quantities are rounded to 6dp", () => {
     const merged = aggregateSnapshots([
       { positions: [{ symbol: "X", quantity: "0.1", currency: "USD" }], cashBalances: {} },
       { positions: [{ symbol: "X", quantity: "0.2", currency: "USD" }], cashBalances: {} },
@@ -246,7 +244,7 @@ describe("aggregateSnapshots", () => {
     assert.equal(merged.positions[0].quantity, "0.3");
   });
 
-  test("a zero total quantity doesn't produce a NaN/Infinity average cost", () => {
+  test("a zero total quantity has no average cost", () => {
     const merged = aggregateSnapshots([
       {
         positions: [{ symbol: "X", quantity: "0", currency: "USD", averageCost: "10" }],

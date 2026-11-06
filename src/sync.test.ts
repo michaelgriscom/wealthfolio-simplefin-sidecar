@@ -117,7 +117,6 @@ test("maps, aggregates and saves one dated snapshot per Wealthfolio account", as
     log,
   );
 
-  // One date for the whole run, shared by every snapshot and the result.
   const date = result.date;
   assert.match(date, /^\d{4}-\d{2}-\d{2}$/);
   assert.deepEqual(wf.snapshots, [
@@ -176,7 +175,7 @@ test("configured cash symbols replace the default money-market list", async () =
   assert.deepEqual(wf.snapshots[0].cashBalances, { USD: "600" });
 });
 
-test("missing SimpleFIN accounts are reported; a Wealthfolio account with none left is not written", async () => {
+test("reports missing SimpleFIN accounts and skips targets with none left", async () => {
   const wf = fakeServers({ simplefin: { errors: [], accounts: [brokerageA] } });
   const result = await runSync(
     config({ mapping: { "wf-partial": ["sf-a", "sf-gone"], "wf-empty": ["sf-gone-1", "sf-gone-2"] } }),
@@ -195,7 +194,7 @@ test("missing SimpleFIN accounts are reported; a Wealthfolio account with none l
   assert.equal(result.accountsFailed, 0);
 });
 
-test("SimpleFIN connection errors are logged as warnings without failing the sync", async () => {
+test("SimpleFIN errors are logged as warnings", async () => {
   fakeServers({
     simplefin: { errors: ["Connection to Vanguard may need attention"], accounts: [ira] },
   });
@@ -208,7 +207,7 @@ test("SimpleFIN connection errors are logged as warnings without failing the syn
   assert.equal(result.accountsSynced, 1);
 });
 
-test("with a password, it logs in once and sends the session cookie with each snapshot", async () => {
+test("logs in once and sends the cookie with each snapshot", async () => {
   const wf = fakeServers({ simplefin: { errors: [], accounts: [brokerageA, ira] } });
   await runSync(
     config({ wfPassword: "pw", mapping: { "wf-1": ["sf-a"], "wf-2": ["sf-ira"] } }),
@@ -218,7 +217,7 @@ test("with a password, it logs in once and sends the session cookie with each sn
   assert.deepEqual(wf.snapshotCookies, ["wf=session", "wf=session"]);
 });
 
-test("without a password, it skips login and says so", async () => {
+test("skips login without a password", async () => {
   const wf = fakeServers({ simplefin: { errors: [], accounts: [ira] } });
   const logger = recordingLogger();
   await runSync(config({ mapping: { "wf-ira": ["sf-ira"] } }), logger.log);
@@ -247,7 +246,7 @@ test("one account failing to save doesn't stop the others", async () => {
   assert.deepEqual(logger.at("error"), result.errors);
 });
 
-test("a SimpleFIN failure rejects before anything is written to Wealthfolio", async () => {
+test("a SimpleFIN failure rejects before any write", async () => {
   const wf = fakeServers({ simplefin: new Response("Forbidden", { status: 403 }) });
   await assert.rejects(
     runSync(config({ wfPassword: "pw", mapping: { "wf-1": ["sf-a"] } }), recordingLogger().log),
@@ -257,7 +256,7 @@ test("a SimpleFIN failure rejects before anything is written to Wealthfolio", as
   assert.deepEqual(wf.snapshots, []);
 });
 
-test("a Wealthfolio login failure rejects before any snapshot is written", async () => {
+test("a login failure rejects before any write", async () => {
   const wf = fakeServers({ simplefin: { errors: [], accounts: [ira] }, loginStatus: 401 });
   await assert.rejects(
     runSync(config({ wfPassword: "wrong", mapping: { "wf-ira": ["sf-ira"] } }), recordingLogger().log),

@@ -112,18 +112,15 @@ describe("loadConfig", () => {
     );
   });
 
-  test.todo(
-    "a mapping value that isn't a list of ids is rejected at load — today it loads, then runSync crashes with a TypeError",
-    () => {
-      assert.throws(() => load({ ...minimal, mapping: { "wf-1": "sf-1" } }), /mapping/);
-    },
-  );
+  // BUG: this loads today, then runSync throws a TypeError.
+  test.todo("rejects a non-array mapping value", () => {
+    assert.throws(() => load({ ...minimal, mapping: { "wf-1": "sf-1" } }), /mapping/);
+  });
 
-  test.todo(
-    "an invalid SYNC_AT or PORT is rejected at load — today both are accepted; a bad SYNC_AT makes msUntilNext return NaN, so the daily scheduler re-fires every ~1ms",
-    () => {
-      assert.throws(() => load(minimal, { SYNC_AT: "4am" }));
-      assert.throws(() => load(minimal, { PORT: "http" }));
-    },
-  );
+  // BUG: both load today. A bad SYNC_AT makes msUntilNext return NaN, and the
+  // scheduler then re-fires every ~1ms.
+  test.todo("rejects an invalid SYNC_AT or PORT", () => {
+    assert.throws(() => load(minimal, { SYNC_AT: "4am" }));
+    assert.throws(() => load(minimal, { PORT: "http" }));
+  });
 });

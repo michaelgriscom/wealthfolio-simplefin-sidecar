@@ -19,7 +19,7 @@ test("line and block comments are stripped", () => {
   assert.deepEqual(parseJsonc(text), { a: 1, b: 2 });
 });
 
-test("comment markers inside strings are kept (access URLs contain //)", () => {
+test("comment markers inside strings are kept", () => {
   const text = `{
     "simplefinAccessUrl": "https://user:pass@bridge.simplefin.org/simplefin", // real comment
     "note": "/* not a comment */"
@@ -41,7 +41,7 @@ test("trailing commas in objects and arrays are dropped", () => {
   assert.deepEqual(parseJsonc('{"a": [1, 2,], "b": {"c": 3,},}'), { a: [1, 2], b: { c: 3 } });
 });
 
-test("commenting out the last mapping entry leaves a parseable file", () => {
+test("a commented-out last entry parses", () => {
   const text = `{
     "mapping": {
       "wf-1": ["sf-1", "sf-2"],
@@ -55,13 +55,13 @@ test("commas inside strings that look trailing are kept", () => {
   assert.deepEqual(parseJsonc('{"a": "x, }", "b": ", ]"}'), { a: "x, }", b: ", ]" });
 });
 
-test("line numbers survive comment stripping so parse errors point at the right line", () => {
-  // The missing comma after `"a": 1` is reported against `"b"` on line 6.
+test("parse errors report the original line number", () => {
+  // The missing comma after `"a": 1` is reported at `"b"`, line 6.
   const text = '{\n  // comment\n  /* block\n  */\n  "a": 1\n  "b": 2\n}';
   assert.throws(() => parseJsonc(text), /\(line 6 column 3\)/);
 });
 
-test("genuinely invalid JSON still throws", () => {
+test("invalid JSON throws", () => {
   assert.throws(() => parseJsonc('{"a": }'), SyntaxError);
   assert.throws(() => parseJsonc('{"a": 1 /* unterminated'), SyntaxError);
 });

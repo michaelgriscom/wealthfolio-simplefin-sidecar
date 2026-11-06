@@ -32,7 +32,7 @@ describe("parseAccessUrl", () => {
     });
   });
 
-  test("percent-encoded credentials are decoded before encoding the header", () => {
+  test("percent-encoded credentials are decoded", () => {
     const { authHeader } = parseAccessUrl("https://us%40er:p%3As%2Fs@bridge.simplefin.org/simplefin");
     assert.equal(authHeader, basic("us@er", "p:s/s"));
   });
@@ -83,7 +83,7 @@ describe("claimToken", () => {
     assert.equal(calls.length, 0);
   });
 
-  test("an HTTP error explains the token may be used and includes the body", async () => {
+  test("an HTTP error says the token may be used and includes the body", async () => {
     mockFetch(() => new Response("Forbidden: already claimed", { status: 403 }));
     await assert.rejects(
       claimToken(token(claimUrl)),

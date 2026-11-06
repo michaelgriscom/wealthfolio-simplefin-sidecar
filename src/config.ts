@@ -73,8 +73,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SyncConfig {
     cashSymbols: env.CASH_SYMBOLS
       ? env.CASH_SYMBOLS.split(",").map((s) => s.trim()).filter(Boolean)
       : undefined,
-    syncAt: syncAt(env.SYNC_AT ?? "04:00"),
-    port: port(env.PORT ?? "8080"),
+    syncAt: syncAt(env.SYNC_AT?.trim() || "04:00"),
+    port: port(env.PORT?.trim() || "8080"),
     runOnStart: (env.RUN_ON_START ?? "false").toLowerCase() === "true",
     exchangeMic: file.exchangeMic ?? env.EXCHANGE_MIC ?? "XNAS",
   };

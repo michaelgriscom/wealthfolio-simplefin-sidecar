@@ -124,12 +124,21 @@ describe("loadConfig", () => {
 
   // A bad SYNC_AT would make msUntilNext return NaN and the scheduler re-fire every ~1ms.
   test("rejects an invalid SYNC_AT or PORT", () => {
-    for (const v of ["4am", "24:00", "04:60", "0400", ""]) {
+    for (const v of ["4am", "24:00", "04:60", "0400"]) {
       assert.throws(() => load(minimal, { SYNC_AT: v }), /SYNC_AT must be a 24h "HH:MM" time/, v);
     }
-    for (const v of ["http", "0", "65536", "80.5", ""]) {
+    for (const v of ["http", "0", "65536", "80.5"]) {
       assert.throws(() => load(minimal, { PORT: v }), /PORT must be an integer/, v);
     }
     assert.equal(load(minimal, { SYNC_AT: "4:05" }).syncAt, "4:05");
+  });
+
+  test("an empty SYNC_AT or PORT uses the default, and values are trimmed", () => {
+    const empty = load(minimal, { SYNC_AT: " ", PORT: "" });
+    assert.equal(empty.syncAt, "04:00");
+    assert.equal(empty.port, 8080);
+    const padded = load(minimal, { SYNC_AT: " 23:15 ", PORT: " 9000 " });
+    assert.equal(padded.syncAt, "23:15");
+    assert.equal(padded.port, 9000);
   });
 });

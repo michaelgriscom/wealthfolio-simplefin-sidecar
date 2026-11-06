@@ -3,7 +3,9 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    # renovate/** so branch automerge has a check to gate on. A Renovate PR
+    # also triggers pull_request; the duplicate run is harmless.
+    branches: [main, 'renovate/**']
 
 permissions:
   contents: read

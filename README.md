@@ -138,8 +138,10 @@ earlier draft also skipped cash automatically for any account whose holdings
 had no market values; that no longer happens outside `cryptoAccounts`.)
 
 **Migrating from `cryptoSymbols`:** the older `cryptoSymbols` ticker list is
-still accepted but deprecated. Any mapped account whose non-cash holdings are
-*all* in that list is treated as a crypto account, and each sync logs the
+still accepted but deprecated. A mapped account is treated as a crypto
+account if it holds at least one listed ticker and none of its holdings report
+a market value (how SimpleFIN's Coinbase feed looks; brokerages report market
+values, so a stock sharing a crypto ticker isn't affected). Each sync logs the
 `"cryptoAccounts": [...]` line to paste into your config in its place.
 
 ## HTTP endpoints

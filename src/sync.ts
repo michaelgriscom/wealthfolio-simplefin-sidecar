@@ -44,11 +44,21 @@ export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult>
   if (cfg.cryptoSymbols?.length) {
     const mappedIds = new Set(Object.values(cfg.mapping).flat());
     const mapped = sf.accounts.filter((a) => mappedIds.has(a.id) && !cryptoAccounts.has(a.id));
-    const inferred = inferCryptoAccounts(mapped, cfg.cryptoSymbols, cfg.cashSymbols);
-    for (const id of inferred) cryptoAccounts.add(id);
+    for (const { id, unlisted } of inferCryptoAccounts(mapped, cfg.cryptoSymbols, cfg.cashSymbols)) {
+      cryptoAccounts.add(id);
+      if (unlisted.length) {
+        log.warn(
+          `SimpleFIN account ${id} treated as crypto via cryptoSymbols, including ` +
+            `unlisted symbols [${unlisted.join(", ")}]`,
+        );
+      }
+    }
     log.warn(
-      `config.cryptoSymbols is deprecated. Replace it with: ` +
-        `"cryptoAccounts": ${JSON.stringify([...cryptoAccounts])}`,
+      cryptoAccounts.size
+        ? `config.cryptoSymbols is deprecated. Replace it with: ` +
+            `"cryptoAccounts": ${JSON.stringify([...cryptoAccounts])}`
+        : `config.cryptoSymbols is deprecated and matched no account this run; ` +
+            `list your crypto SimpleFIN account ids under "cryptoAccounts" instead`,
     );
   }
 

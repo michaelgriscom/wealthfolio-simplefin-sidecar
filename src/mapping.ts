@@ -32,28 +32,41 @@ export interface MapOptions {
   crypto?: boolean;
 }
 
+export interface InferredCryptoAccount {
+  id: string;
+  /** Non-cash symbols in the account that aren't in `cryptoSymbols`. */
+  unlisted: string[];
+}
+
 /**
- * Legacy `cryptoSymbols` support: return the ids of accounts that have at
- * least one non-cash holding and whose non-cash holdings are *all* in
- * `cryptoSymbols`. Inferring at the account level keeps a stock that shares a
- * crypto ticker (AMP, ZETA, ...) in a brokerage account from being treated as
- * crypto.
+ * Legacy `cryptoSymbols` support: infer which accounts are crypto accounts.
+ * An account qualifies if it holds at least one listed symbol AND none of its
+ * non-cash holdings report a market value (the shape of SimpleFIN's Coinbase
+ * feed). Brokerages report market values, so a stock that shares a crypto
+ * ticker (AMP, ZETA, ...) doesn't turn a brokerage account into a crypto one,
+ * while an unlisted coin doesn't stop a Coinbase account from qualifying.
  */
 export function inferCryptoAccounts(
   accounts: SimpleFinAccount[],
   cryptoSymbols: string[],
   cashSymbols: string[] = DEFAULT_CASH_SYMBOLS,
-): string[] {
+): InferredCryptoAccount[] {
   const crypto = new Set(cryptoSymbols.map((s) => s.toUpperCase()));
   const cash = new Set(cashSymbols.map((s) => s.toUpperCase()));
-  return accounts
-    .filter((a) => {
-      const symbols = (a.holdings ?? [])
-        .map((h) => (h.symbol ?? "").trim().toUpperCase())
-        .filter((s) => s && !cash.has(s));
-      return symbols.length > 0 && symbols.every((s) => crypto.has(s));
-    })
-    .map((a) => a.id);
+  const result: InferredCryptoAccount[] = [];
+  for (const account of accounts) {
+    const holdings = (account.holdings ?? []).filter((h) => {
+      const s = (h.symbol ?? "").trim().toUpperCase();
+      return s && !cash.has(s);
+    });
+    const symbols = holdings.map((h) => h.symbol.trim().toUpperCase());
+    const anyListed = symbols.some((s) => crypto.has(s));
+    const anyPriced = holdings.some((h) => toNumber(h.market_value) > 0);
+    if (anyListed && !anyPriced) {
+      result.push({ id: account.id, unlisted: symbols.filter((s) => !crypto.has(s)) });
+    }
+  }
+  return result;
 }
 
 /**

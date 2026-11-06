@@ -89,14 +89,29 @@ test("crypto account with no holdings syncs balance as cash", () => {
   assert.equal(snap.warnings, undefined);
 });
 
-test("inferCryptoAccounts only picks accounts that are entirely crypto", () => {
+test("inferCryptoAccounts: listed coin + no market values, unlisted coins reported", () => {
   const accounts = [
-    account({ id: "coinbase", holdings: [{ id: "1", symbol: "BTC" }, { id: "2", symbol: "AMP" }] }),
-    account({ id: "brokerage", holdings: [{ id: "3", symbol: "AMP" }, { id: "4", symbol: "VTI" }] }),
-    account({ id: "mmf-only", holdings: [{ id: "5", symbol: "SPAXX" }] }),
+    account({
+      id: "coinbase",
+      holdings: [
+        { id: "1", symbol: "BTC", shares: "1", market_value: "0" },
+        { id: "2", symbol: "SOL", shares: "3" },
+      ],
+    }),
+    account({
+      id: "brokerage",
+      holdings: [
+        { id: "3", symbol: "AMP", shares: "10", market_value: "5000" },
+        { id: "4", symbol: "VTI", shares: "4", market_value: "1000" },
+      ],
+    }),
+    account({ id: "unpriced-stocks", holdings: [{ id: "5", symbol: "VTI", shares: "4" }] }),
+    account({ id: "mmf-only", holdings: [{ id: "6", symbol: "SPAXX", shares: "1" }] }),
     account({ id: "empty" }),
   ];
-  assert.deepEqual(inferCryptoAccounts(accounts, ["BTC", "AMP"]), ["coinbase"]);
+  assert.deepEqual(inferCryptoAccounts(accounts, ["BTC", "AMP"]), [
+    { id: "coinbase", unlisted: ["SOL"] },
+  ]);
 });
 
 test("crypto account: a zero-share dust holding doesn't block cash", () => {

@@ -74,9 +74,11 @@ describe("mapAccountToSnapshot", () => {
     const snap = mapAccountToSnapshot(
       account({
         currency: "cad",
-        balance: "100",
+        // XEQT has a market value so cash is derived from the balance on every
+        // branch (#5 treats "no holding has a market value" as all-invested).
+        balance: "110",
         holdings: [
-          holding("XEQT", { currency: "cad" }),
+          holding("XEQT", { currency: "cad", market_value: "10" }),
           holding("VTI", { currency: "USD" }),
           holding("ODD", { currency: "https://example.com/token" }),
           holding("NONE"),

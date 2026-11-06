@@ -36,9 +36,3 @@ test("schedules follow the local wall clock across a DST change", () => {
   assert.equal(msUntilNext("04:00", now), 23 * HOUR);
 });
 
-test.todo(
-  "an invalid SYNC_AT (e.g. '4am') is rejected — today it yields NaN, which setTimeout treats as ~1ms, so scheduleDaily() fires back-to-back",
-  () => {
-    assert.ok(Number.isFinite(msUntilNext("4am", new Date(2026, 0, 15, 1, 0))));
-  },
-);

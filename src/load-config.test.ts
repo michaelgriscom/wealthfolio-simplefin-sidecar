@@ -1,14 +1,22 @@
-import { describe, test } from "node:test";
+import { afterEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadConfig } from "./config";
 
 const ACCESS_URL = "https://user:pass@bridge.simplefin.org/simplefin";
 
+const tempDirs: string[] = [];
+
+afterEach(() => {
+  for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
+
 function writeConfig(text: string): string {
-  const path = join(mkdtempSync(join(tmpdir(), "sidecar-load-config-")), "config.json");
+  const dir = mkdtempSync(join(tmpdir(), "sidecar-load-config-"));
+  tempDirs.push(dir);
+  const path = join(dir, "config.json");
   writeFileSync(path, text);
   return path;
 }
@@ -111,8 +119,11 @@ describe("loadConfig", () => {
     },
   );
 
-  test.todo("an invalid SYNC_AT or PORT is rejected at load — today both are accepted as-is", () => {
-    assert.throws(() => load(minimal, { SYNC_AT: "4am" }));
-    assert.throws(() => load(minimal, { PORT: "http" }));
-  });
+  test.todo(
+    "an invalid SYNC_AT or PORT is rejected at load — today both are accepted; a bad SYNC_AT makes msUntilNext return NaN, so the daily scheduler re-fires every ~1ms",
+    () => {
+      assert.throws(() => load(minimal, { SYNC_AT: "4am" }));
+      assert.throws(() => load(minimal, { PORT: "http" }));
+    },
+  );
 });

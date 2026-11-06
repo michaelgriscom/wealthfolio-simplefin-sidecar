@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { parseJsonc } from "./jsonc";
+import type { CryptoScope } from "./mapping";
 
 export interface SyncConfig {
   wfBaseUrl: string;
@@ -9,16 +10,17 @@ export interface SyncConfig {
   mapping: Record<string, string[]>;
   cashSymbols?: string[];
   /**
-   * SimpleFIN account ids whose holdings are all cryptocurrencies (e.g.
-   * Coinbase wallets). Their holdings are emitted as CRYPTO instruments
-   * (priced natively by Wealthfolio, e.g. BTC-USD) instead of equities on
-   * `exchangeMic`. Scoped per account so crypto tickers that collide with
-   * stock tickers (AMP, ZETA, COMP, ...) don't affect brokerage accounts.
+   * SimpleFIN account id -> which of its holdings are crypto: "all" (e.g. a
+   * Coinbase account) or a list of tickers (an account holding stocks and
+   * coins). Crypto holdings are emitted as CRYPTO instruments (priced natively
+   * by Wealthfolio, e.g. BTC-USD) instead of equities on `exchangeMic`. Scoped
+   * per account so crypto tickers that collide with stock tickers (AMP, ZETA,
+   * COMP, ...) don't affect other accounts.
    */
-  cryptoAccounts?: string[];
+  cryptoAccounts?: Record<string, CryptoScope>;
   /**
-   * Deprecated: use `cryptoAccounts`. Accounts whose non-cash holdings are all
-   * in this list are treated as crypto accounts.
+   * Deprecated: use `cryptoAccounts`. Applied to mapped accounts via
+   * `inferCryptoAccounts`.
    */
   cryptoSymbols?: string[];
   /** Daily run time, 24h "HH:MM" local. */
@@ -42,6 +44,29 @@ function stringArray(key: string, value: unknown): string[] | undefined {
     throw new Error(`config.${key} must be an array of strings`);
   }
   return value;
+}
+
+/**
+ * `cryptoAccounts` accepts a list of account ids (each meaning "all") or an
+ * object of account id -> "all" | ticker list.
+ */
+function cryptoAccounts(value: unknown): Record<string, CryptoScope> | undefined {
+  if (value === undefined) return undefined;
+  if (Array.isArray(value)) {
+    const ids = stringArray("cryptoAccounts", value) ?? [];
+    return Object.fromEntries(ids.map((id) => [id, "all" as const]));
+  }
+  const err = new Error(
+    'config.cryptoAccounts must be a list of account ids, or an object of account id -> "all" or a list of tickers',
+  );
+  if (typeof value !== "object" || value === null) throw err;
+  const out: Record<string, CryptoScope> = {};
+  for (const [id, scope] of Object.entries(value)) {
+    if (scope === "all") out[id] = "all";
+    else if (Array.isArray(scope) && scope.every((s) => typeof s === "string")) out[id] = scope;
+    else throw err;
+  }
+  return out;
 }
 
 function required(key: string, value: string | undefined): string {
@@ -79,7 +104,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SyncConfig {
     syncAt: env.SYNC_AT ?? "04:00",
     port: Number(env.PORT ?? "8080"),
     runOnStart: (env.RUN_ON_START ?? "false").toLowerCase() === "true",
-    cryptoAccounts: stringArray("cryptoAccounts", file.cryptoAccounts),
+    cryptoAccounts: cryptoAccounts(file.cryptoAccounts),
     cryptoSymbols: stringArray("cryptoSymbols", file.cryptoSymbols),
     exchangeMic: file.exchangeMic ?? env.EXCHANGE_MIC ?? "XNAS",
   };

@@ -1,4 +1,4 @@
-import { inferCryptoAccounts, mapAccountToSnapshot } from "./mapping";
+import { inferCryptoAccounts, mapAccountToSnapshot, type CryptoScope } from "./mapping";
 import { fetchAccounts, type SimpleFinAccount } from "./simplefin";
 import { aggregateSnapshots } from "./aggregate";
 import type { SyncConfig } from "./config";
@@ -35,8 +35,8 @@ export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult>
   for (const e of sf.errors ?? []) log.warn(`SimpleFIN connection warning: ${e}`);
   const byId = new Map<string, SimpleFinAccount>(sf.accounts.map((a) => [a.id, a]));
 
-  const cryptoAccounts = new Set(cfg.cryptoAccounts ?? []);
-  for (const id of cryptoAccounts) {
+  const cryptoAccounts = new Map<string, CryptoScope>(Object.entries(cfg.cryptoAccounts ?? {}));
+  for (const id of cryptoAccounts.keys()) {
     if (!byId.has(id)) {
       log.warn(`cryptoAccounts lists ${id}, which SimpleFIN did not return; check the id`);
     }
@@ -44,21 +44,27 @@ export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult>
   if (cfg.cryptoSymbols?.length) {
     const mappedIds = new Set(Object.values(cfg.mapping).flat());
     const mapped = sf.accounts.filter((a) => mappedIds.has(a.id) && !cryptoAccounts.has(a.id));
-    for (const { id, unlisted } of inferCryptoAccounts(mapped, cfg.cryptoSymbols, cfg.cashSymbols)) {
-      cryptoAccounts.add(id);
-      if (unlisted.length) {
+    for (const { id, scope, unlisted } of inferCryptoAccounts(mapped, cfg.cryptoSymbols, cfg.cashSymbols)) {
+      cryptoAccounts.set(id, scope);
+      if (scope === "all" && unlisted.length) {
         log.warn(
-          `SimpleFIN account ${id} treated as crypto via cryptoSymbols, including ` +
+          `SimpleFIN account ${id} treated as all-crypto via cryptoSymbols, including ` +
             `unlisted symbols [${unlisted.join(", ")}]`,
+        );
+      } else if (scope !== "all") {
+        log.warn(
+          `SimpleFIN account ${id} reports market values, so only [${scope.join(", ")}] ` +
+            `are treated as crypto via cryptoSymbols; if any of these are stocks, ` +
+            `remove them from this account in cryptoAccounts`,
         );
       }
     }
     log.warn(
       cryptoAccounts.size
         ? `config.cryptoSymbols is deprecated. Replace it with: ` +
-            `"cryptoAccounts": ${JSON.stringify([...cryptoAccounts])}`
+            `"cryptoAccounts": ${JSON.stringify(Object.fromEntries(cryptoAccounts))}`
         : `config.cryptoSymbols is deprecated and matched no account this run; ` +
-            `list your crypto SimpleFIN account ids under "cryptoAccounts" instead`,
+            `list your crypto SimpleFIN accounts under "cryptoAccounts" instead`,
     );
   }
 
@@ -79,7 +85,7 @@ export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult>
     if (sources.length === 0) continue;
 
     const snapshots = sources.map((a) =>
-      mapAccountToSnapshot(a, { cashSymbols: cfg.cashSymbols, crypto: cryptoAccounts.has(a.id) }),
+      mapAccountToSnapshot(a, { cashSymbols: cfg.cashSymbols, crypto: cryptoAccounts.get(a.id) }),
     );
     for (const w of snapshots.flatMap((s) => s.warnings ?? [])) log.warn(w);
     const merged = aggregateSnapshots(snapshots);

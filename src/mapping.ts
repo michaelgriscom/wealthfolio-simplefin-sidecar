@@ -23,28 +23,34 @@ export interface MappedSnapshot {
   warnings?: string[];
 }
 
+/**
+ * Which holdings of an account are crypto: `"all"` (e.g. a Coinbase account)
+ * or a list of tickers (an account holding both stocks and coins).
+ */
+export type CryptoScope = "all" | string[];
+
 export interface MapOptions {
   cashSymbols?: string[];
-  /**
-   * Treat every non-cash holding as a CRYPTO instrument. Set for SimpleFIN
-   * accounts listed in `cryptoAccounts` (e.g. Coinbase wallets).
-   */
-  crypto?: boolean;
+  /** Holdings to emit as CRYPTO instruments. Omit for an ordinary account. */
+  crypto?: CryptoScope;
 }
 
 export interface InferredCryptoAccount {
   id: string;
-  /** Non-cash symbols in the account that aren't in `cryptoSymbols`. */
+  scope: CryptoScope;
+  /** For `scope: "all"`: non-cash symbols that aren't in `cryptoSymbols`. */
   unlisted: string[];
 }
 
 /**
- * Legacy `cryptoSymbols` support: infer which accounts are crypto accounts.
- * An account qualifies if it holds at least one listed symbol AND none of its
- * non-cash holdings report a market value (the shape of SimpleFIN's Coinbase
- * feed). Brokerages report market values, so a stock that shares a crypto
- * ticker (AMP, ZETA, ...) doesn't turn a brokerage account into a crypto one,
- * while an unlisted coin doesn't stop a Coinbase account from qualifying.
+ * Legacy `cryptoSymbols` support: infer each account's crypto scope.
+ *  - An account that holds at least one listed symbol and reports no market
+ *    values (the shape of SimpleFIN's Coinbase feed) is `"all"` crypto, so an
+ *    unlisted coin doesn't stop it from qualifying.
+ *  - Any other account holding listed symbols gets just those symbols as
+ *    crypto — PR #5's original per-ticker behaviour, kept so mixed accounts
+ *    still work. The caller warns, since a stock sharing a crypto ticker
+ *    (AMP, ZETA, ...) is misclassified this way.
  */
 export function inferCryptoAccounts(
   accounts: SimpleFinAccount[],
@@ -62,8 +68,12 @@ export function inferCryptoAccounts(
     const symbols = holdings.map((h) => h.symbol.trim().toUpperCase());
     const anyListed = symbols.some((s) => crypto.has(s));
     const anyPriced = holdings.some((h) => toNumber(h.market_value) > 0);
-    if (anyListed && !anyPriced) {
-      result.push({ id: account.id, unlisted: symbols.filter((s) => !crypto.has(s)) });
+    if (!anyListed) continue;
+    if (!anyPriced) {
+      result.push({ id: account.id, scope: "all", unlisted: symbols.filter((s) => !crypto.has(s)) });
+    } else {
+      const listed = [...new Set(symbols.filter((s) => crypto.has(s)))];
+      result.push({ id: account.id, scope: listed, unlisted: [] });
     }
   }
   return result;
@@ -116,21 +126,23 @@ function averageCost(holding: SimpleFinHolding): string | undefined {
  * captures both money-market funds and any uninvested sweep balance not
  * reported as its own holding.
  *
- * Crypto accounts (`options.crypto`) differ in two ways:
- *  - holdings become CRYPTO instruments (`instrumentType: "CRYPTO"` +
+ * Crypto holdings (`options.crypto`: every holding, or listed tickers):
+ *  - become CRYPTO instruments (`instrumentType: "CRYPTO"` +
  *    `quoteCcy`), which Wealthfolio keys as CRYPTO:{BASE}/{QUOTE} and prices
  *    natively (e.g. BTC-USD) instead of matching an equity with that ticker;
  *  - some aggregators (notably SimpleFIN's Coinbase feed) report the account's
  *    USD value as `balance` but leave `market_value` empty or 0 on holdings.
- *    If any holding lacks a market value, the balance cannot be split into
- *    holdings vs. cash, so no cash is emitted (Wealthfolio values the
+ *    If any held crypto holding lacks a market value, the balance cannot be
+ *    split into holdings vs. cash, so no cash is emitted (Wealthfolio values the
  *    positions from quotes) and a warning is returned.
  */
 export function mapAccountToSnapshot(
   account: SimpleFinAccount,
   options: MapOptions = {},
 ): MappedSnapshot {
-  const { cashSymbols = DEFAULT_CASH_SYMBOLS, crypto = false } = options;
+  const { cashSymbols = DEFAULT_CASH_SYMBOLS, crypto } = options;
+  const cryptoSet = Array.isArray(crypto) ? new Set(crypto.map((s) => s.toUpperCase())) : null;
+  const isCrypto = (symbol: string) => crypto === "all" || (cryptoSet?.has(symbol.toUpperCase()) ?? false);
   const rawAccountCurrency = normalizeCurrency(account.currency);
   const accountCurrency = crypto ? fiatOr(rawAccountCurrency, "USD") : rawAccountCurrency;
   const cashSet = new Set(cashSymbols.map((s) => s.toUpperCase()));
@@ -147,28 +159,29 @@ export function mapAccountToSnapshot(
       // economically cash — accounted for via the balance-derived cash below
       continue;
     }
+    const holdingIsCrypto = isCrypto(symbol);
     const marketValue = toNumber(holding.market_value);
-    // A held position (shares > 0) with no positive market value means the
-    // feed didn't price it. Zero-share dust/closed positions don't count.
-    if (marketValue <= 0 && toNumber(holding.shares) > 0) missingMarketValue += 1;
+    // A held coin (shares > 0) with no positive market value means the feed
+    // didn't price it. Zero-share dust/closed positions don't count.
+    if (holdingIsCrypto && marketValue <= 0 && toNumber(holding.shares) > 0) missingMarketValue += 1;
     nonCashMarketValue += marketValue;
     const holdingCurrency = normalizeCurrency(holding.currency, accountCurrency);
-    const currency = crypto ? fiatOr(holdingCurrency, accountCurrency) : holdingCurrency;
+    const currency = holdingIsCrypto ? fiatOr(holdingCurrency, accountCurrency) : holdingCurrency;
     const avg = averageCost(holding);
     positions.push({
       symbol,
       quantity: holding.shares ?? "0",
       currency,
-      ...(crypto ? { instrumentType: "CRYPTO", quoteCcy: currency } : {}),
+      ...(holdingIsCrypto ? { instrumentType: "CRYPTO", quoteCcy: currency } : {}),
       ...(avg !== undefined ? { averageCost: avg } : {}),
     });
   }
 
   const cashBalances: Record<string, string> = {};
-  if (crypto && missingMarketValue > 0) {
+  if (missingMarketValue > 0) {
     const warning =
-      `SimpleFIN account ${account.id} (${account.name}): ${missingMarketValue} of ` +
-      `${positions.length} holdings have no market value, so cash cannot be derived ` +
+      `SimpleFIN account ${account.id} (${account.name}): ${missingMarketValue} ` +
+      `crypto holding(s) have no market value, so cash cannot be derived ` +
       `from the balance (${account.balance}); syncing positions with no cash. ` +
       `Any fiat cash in this account is not synced.`;
     return { positions, cashBalances, warnings: [warning] };

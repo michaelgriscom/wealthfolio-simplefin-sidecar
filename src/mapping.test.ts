@@ -44,7 +44,7 @@ test("crypto account: holdings become CRYPTO instruments", () => {
       balance: "100",
       holdings: [{ id: "h1", symbol: "BTC", shares: "0.001", market_value: "100" }],
     }),
-    { crypto: true },
+    { crypto: "all" },
   );
   assert.deepEqual(snap.positions, [
     { symbol: "BTC", quantity: "0.001", currency: "USD", instrumentType: "CRYPTO", quoteCcy: "USD" },
@@ -61,7 +61,7 @@ test("crypto account with all market values zero emits no cash and warns", () =>
         { id: "h2", symbol: "ETH", shares: "1" },
       ],
     }),
-    { crypto: true },
+    { crypto: "all" },
   );
   assert.equal(snap.positions.length, 2);
   assert.deepEqual(snap.cashBalances, {});
@@ -77,19 +77,19 @@ test("crypto account with partial market values emits no phantom cash", () => {
         { id: "h2", symbol: "ETH", shares: "0.1", market_value: "0" },
       ],
     }),
-    { crypto: true },
+    { crypto: "all" },
   );
   assert.deepEqual(snap.cashBalances, {});
   assert.equal(snap.warnings?.length, 1);
 });
 
 test("crypto account with no holdings syncs balance as cash", () => {
-  const snap = mapAccountToSnapshot(account({ balance: "50" }), { crypto: true });
+  const snap = mapAccountToSnapshot(account({ balance: "50" }), { crypto: "all" });
   assert.deepEqual(snap.cashBalances, { USD: "50" });
   assert.equal(snap.warnings, undefined);
 });
 
-test("inferCryptoAccounts: listed coin + no market values, unlisted coins reported", () => {
+test("inferCryptoAccounts: whole-account vs per-ticker scope", () => {
   const accounts = [
     account({
       id: "coinbase",
@@ -110,7 +110,9 @@ test("inferCryptoAccounts: listed coin + no market values, unlisted coins report
     account({ id: "empty" }),
   ];
   assert.deepEqual(inferCryptoAccounts(accounts, ["BTC", "AMP"]), [
-    { id: "coinbase", unlisted: ["SOL"] },
+    { id: "coinbase", scope: "all", unlisted: ["SOL"] },
+    // priced account: falls back to #5's per-ticker behaviour (caller warns)
+    { id: "brokerage", scope: ["AMP"], unlisted: [] },
   ]);
 });
 
@@ -123,7 +125,7 @@ test("crypto account: a zero-share dust holding doesn't block cash", () => {
         { id: "h2", symbol: "SHIB", shares: "0", market_value: "0" },
       ],
     }),
-    { crypto: true },
+    { crypto: "all" },
   );
   assert.deepEqual(snap.cashBalances, { USD: "200" });
   assert.equal(snap.warnings, undefined);
@@ -136,11 +138,11 @@ test("crypto account: a coin-code currency falls back to USD", () => {
       balance: "100",
       holdings: [{ id: "h1", symbol: "BTC", shares: "0.001", market_value: "100", currency: "BTC" }],
     }),
-    { crypto: true },
+    { crypto: "all" },
   );
   assert.equal(snap.positions[0].currency, "USD");
   assert.equal(snap.positions[0].quoteCcy, "USD");
-  const empty = mapAccountToSnapshot(account({ currency: "BTC", balance: "5" }), { crypto: true });
+  const empty = mapAccountToSnapshot(account({ currency: "BTC", balance: "5" }), { crypto: "all" });
   assert.deepEqual(empty.cashBalances, { USD: "5" });
 });
 
@@ -151,7 +153,53 @@ test("crypto account keeps a non-USD fiat quote currency", () => {
       balance: "100",
       holdings: [{ id: "h1", symbol: "BTC", shares: "0.001", market_value: "100" }],
     }),
-    { crypto: true },
+    { crypto: "all" },
   );
   assert.equal(snap.positions[0].quoteCcy, "EUR");
+});
+
+test("mixed account: only listed tickers become crypto", () => {
+  const snap = mapAccountToSnapshot(
+    account({
+      balance: "1300",
+      holdings: [
+        { id: "h1", symbol: "VTI", shares: "4", market_value: "1000" },
+        { id: "h2", symbol: "BTC", shares: "0.002", market_value: "200" },
+      ],
+    }),
+    { crypto: ["btc"] },
+  );
+  assert.deepEqual(snap.positions, [
+    { symbol: "VTI", quantity: "4", currency: "USD" },
+    { symbol: "BTC", quantity: "0.002", currency: "USD", instrumentType: "CRYPTO", quoteCcy: "USD" },
+  ]);
+  assert.deepEqual(snap.cashBalances, { USD: "100" });
+});
+
+test("mixed account: an unpriced coin blocks cash, an unpriced stock doesn't", () => {
+  const coinUnpriced = mapAccountToSnapshot(
+    account({
+      balance: "1300",
+      holdings: [
+        { id: "h1", symbol: "VTI", shares: "4", market_value: "1000" },
+        { id: "h2", symbol: "BTC", shares: "0.002" },
+      ],
+    }),
+    { crypto: ["BTC"] },
+  );
+  assert.deepEqual(coinUnpriced.cashBalances, {});
+  assert.equal(coinUnpriced.warnings?.length, 1);
+
+  const stockUnpriced = mapAccountToSnapshot(
+    account({
+      balance: "1300",
+      holdings: [
+        { id: "h1", symbol: "VTI", shares: "4" },
+        { id: "h2", symbol: "BTC", shares: "0.002", market_value: "200" },
+      ],
+    }),
+    { crypto: ["BTC"] },
+  );
+  assert.deepEqual(stockUnpriced.cashBalances, { USD: "1100" });
+  assert.equal(stockUnpriced.warnings, undefined);
 });

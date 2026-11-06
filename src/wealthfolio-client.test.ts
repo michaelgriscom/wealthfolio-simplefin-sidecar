@@ -32,7 +32,7 @@ test("login without a password makes no request and snapshots carry no cookie", 
   await wf.login(undefined);
   assert.equal(calls.length, 0);
 
-  await wf.saveSnapshot("wf-1", holdings, { USD: "10" }, "2026-01-15");
+  await wf.saveSnapshot("wf-1", holdings, { USD: "10" });
   assert.equal(calls.length, 1);
   assert.equal(headersOf(calls[0]).Cookie, undefined);
 });
@@ -50,7 +50,7 @@ test("login posts the password and the session cookie is sent with snapshots", a
   assert.equal(calls[0].init?.method, "POST");
   assert.deepEqual(JSON.parse(String(calls[0].init?.body)), { password: "hunter2" });
 
-  await wf.saveSnapshot("wf-1", holdings, {}, "2026-01-15");
+  await wf.saveSnapshot("wf-1", holdings, {});
   assert.equal(headersOf(calls[1]).Cookie, "wf_session=abc123");
 });
 
@@ -67,7 +67,7 @@ test("a login with no cookie throws", async () => {
 test("saveSnapshot posts the snapshot payload as JSON", async () => {
   const calls = mockFetch(() => new Response(null, { status: 200 }));
   const wf = new WealthfolioClient(BASE);
-  await wf.saveSnapshot("wf-1", holdings, { USD: "12.5" }, "2026-01-15");
+  await wf.saveSnapshot("wf-1", holdings, { USD: "12.5" });
 
   assert.equal(calls[0].url, `${BASE}/api/v1/snapshots`);
   assert.equal(calls[0].init?.method, "POST");
@@ -76,7 +76,6 @@ test("saveSnapshot posts the snapshot payload as JSON", async () => {
     accountId: "wf-1",
     holdings,
     cashBalances: { USD: "12.5" },
-    snapshotDate: "2026-01-15",
   });
 });
 
@@ -85,7 +84,7 @@ test("an auth failure without a password hints at WF_PASSWORD", async () => {
   const wf = new WealthfolioClient(BASE);
   await wf.login(undefined);
   await assert.rejects(
-    wf.saveSnapshot("wf-1", holdings, {}, "2026-01-15"),
+    wf.saveSnapshot("wf-1", holdings, {}),
     /saveSnapshot failed for wf-1 \(HTTP 401\)\. Set WF_PASSWORD.* unauthorized/,
   );
 });
@@ -98,7 +97,7 @@ test("an auth failure with a session omits the WF_PASSWORD hint", async () => {
   );
   const wf = new WealthfolioClient(BASE);
   await wf.login("pw");
-  await assert.rejects(wf.saveSnapshot("wf-1", holdings, {}, "2026-01-15"), (e: Error) => {
+  await assert.rejects(wf.saveSnapshot("wf-1", holdings, {}), (e: Error) => {
     assert.match(e.message, /HTTP 403/);
     assert.doesNotMatch(e.message, /WF_PASSWORD/);
     return true;
@@ -108,7 +107,7 @@ test("an auth failure with a session omits the WF_PASSWORD hint", async () => {
 test("other errors include the status and response body", async () => {
   mockFetch(() => new Response("account is not in HOLDINGS mode", { status: 422 }));
   await assert.rejects(
-    new WealthfolioClient(BASE).saveSnapshot("wf-9", holdings, {}, "2026-01-15"),
+    new WealthfolioClient(BASE).saveSnapshot("wf-9", holdings, {}),
     /^Error: saveSnapshot failed for wf-9 \(HTTP 422\)\. account is not in HOLDINGS mode$/,
   );
 });

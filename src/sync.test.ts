@@ -11,7 +11,6 @@ interface Snapshot {
   accountId: string;
   holdings: Record<string, string>[];
   cashBalances: Record<string, string>;
-  snapshotDate: string;
 }
 
 interface FakeServers {
@@ -108,7 +107,7 @@ const ira: SimpleFinAccount = {
 
 afterEach(() => mock.restoreAll());
 
-test("maps, aggregates and saves one dated snapshot per Wealthfolio account", async () => {
+test("maps, aggregates and saves one undated snapshot per Wealthfolio account", async () => {
   const wf = fakeServers({ simplefin: { errors: [], accounts: [brokerageA, brokerageB, ira] } });
   const { log } = recordingLogger();
 
@@ -117,8 +116,6 @@ test("maps, aggregates and saves one dated snapshot per Wealthfolio account", as
     log,
   );
 
-  const date = result.date;
-  assert.match(date, /^\d{4}-\d{2}-\d{2}$/);
   assert.deepEqual(wf.snapshots, [
     {
       accountId: "wf-taxable",
@@ -127,13 +124,11 @@ test("maps, aggregates and saves one dated snapshot per Wealthfolio account", as
         { symbol: "VTI", quantity: "6", currency: "USD", averageCost: "216.67", exchangeMic: "XNAS" },
       ],
       cashBalances: { USD: "850" },
-      snapshotDate: date,
     },
     {
       accountId: "wf-ira",
       holdings: [{ symbol: "BND", quantity: "3", currency: "USD", exchangeMic: "XNAS" }],
       cashBalances: {},
-      snapshotDate: date,
     },
   ]);
   assert.equal(result.accountsSynced, 2);

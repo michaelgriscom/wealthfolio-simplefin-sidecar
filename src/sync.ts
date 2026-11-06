@@ -3,7 +3,6 @@ import { fetchAccounts, type SimpleFinAccount } from "./simplefin";
 import { aggregateSnapshots } from "./aggregate";
 import type { SyncConfig } from "./config";
 import { WealthfolioClient } from "./wealthfolio-client";
-import { localDate } from "./schedule";
 
 export interface Logger {
   info(msg: string): void;
@@ -12,7 +11,6 @@ export interface Logger {
 }
 
 export interface SyncResult {
-  date: string;
   finishedAt: string;
   accountsSynced: number;
   accountsFailed: number;
@@ -22,9 +20,7 @@ export interface SyncResult {
 
 /** Run a full sync: pull SimpleFIN holdings and write a snapshot per mapped Wealthfolio account. */
 export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult> {
-  const date = localDate();
   const result: SyncResult = {
-    date,
     finishedAt: "",
     accountsSynced: 0,
     accountsFailed: 0,
@@ -55,7 +51,7 @@ export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult>
     const merged = aggregateSnapshots(sources.map((a) => mapAccountToSnapshot(a, cfg.cashSymbols)));
     const positions = merged.positions.map((p) => ({ ...p, exchangeMic: cfg.exchangeMic }));
     try {
-      await wf.saveSnapshot(wfAccountId, positions, merged.cashBalances, date);
+      await wf.saveSnapshot(wfAccountId, positions, merged.cashBalances);
       result.accountsSynced += 1;
       log.info(
         `Snapshot saved for ${wfAccountId}: ${merged.positions.length} positions, ` +

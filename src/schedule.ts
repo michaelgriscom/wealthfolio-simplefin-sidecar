@@ -6,9 +6,3 @@ export function msUntilNext(hhmm: string, now: Date = new Date()): number {
   if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
   return next.getTime() - now.getTime();
 }
-
-/** The local calendar date of `now` as "YYYY-MM-DD", matching SYNC_AT's local time. */
-export function localDate(now: Date = new Date()): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-}

@@ -23,9 +23,11 @@
     "claim": "tsx src/claim.ts",
     "type-check": "tsc --noEmit"
   },
+  "dependencies": {
+    "tsx": "^4.19.2"
+  },
   "devDependencies": {
     "@types/node": "^20.19.33",
-    "tsx": "^4.19.2",
     "typescript": "^5.9.3"
   }
 }

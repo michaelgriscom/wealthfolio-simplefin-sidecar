@@ -117,7 +117,10 @@ export function mapAccountToSnapshot(
     // didn't price it. Zero-share dust/closed positions don't count.
     if (holdingIsCrypto && marketValue <= 0 && toNumber(holding.shares) > 0) missingMarketValue += 1;
     nonCashMarketValue += marketValue;
-    const currency = normalizeCurrency(holding.currency, accountCurrency);
+    // Crypto feeds send unreliable holding currencies (Coinbase reports an ETH
+    // holding in "ETH" and CLV in "CAD"), so crypto is quoted in the account
+    // currency; a coin quoted in itself (ETH/ETH) can't be valued.
+    const currency = holdingIsCrypto ? accountCurrency : normalizeCurrency(holding.currency, accountCurrency);
     const avg = averageCost(holding);
     positions.push({
       symbol,
@@ -129,6 +132,11 @@ export function mapAccountToSnapshot(
   }
 
   const cashBalances: Record<string, string> = {};
+  // An all-crypto account's balance is the value of its coins, and the feed's
+  // market values can be missing or wrong, so never derive cash from it.
+  // (Coinbase reports one SimpleFIN account per wallet; fiat wallets have no
+  // holdings and still sync their balance as cash.)
+  if (crypto === "all" && positions.length > 0) return { positions, cashBalances };
   if (missingMarketValue > 0) {
     const warning =
       `SimpleFIN account ${account.id} (${account.name}): ${missingMarketValue} ` +

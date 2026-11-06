@@ -52,7 +52,7 @@ test("crypto account: holdings become CRYPTO instruments", () => {
   assert.deepEqual(snap.cashBalances, {});
 });
 
-test("crypto account with all market values zero emits no cash and warns", () => {
+test("all-crypto account with zero market values emits no cash", () => {
   const snap = mapAccountToSnapshot(
     account({
       balance: "232676.61",
@@ -65,10 +65,10 @@ test("crypto account with all market values zero emits no cash and warns", () =>
   );
   assert.equal(snap.positions.length, 2);
   assert.deepEqual(snap.cashBalances, {});
-  assert.equal(snap.warnings?.length, 1);
+  assert.equal(snap.warnings, undefined);
 });
 
-test("crypto account with partial market values emits no phantom cash", () => {
+test("all-crypto account with partial market values emits no phantom cash", () => {
   const snap = mapAccountToSnapshot(
     account({
       balance: "1000",
@@ -80,7 +80,35 @@ test("crypto account with partial market values emits no phantom cash", () => {
     { crypto: "all" },
   );
   assert.deepEqual(snap.cashBalances, {});
-  assert.equal(snap.warnings?.length, 1);
+});
+
+test("all-crypto account with a wrong market value emits no phantom cash", () => {
+  // Seen on Coinbase: market_value about a sixth of the wallet's balance.
+  const snap = mapAccountToSnapshot(
+    account({
+      balance: "6000",
+      holdings: [{ id: "h1", symbol: "BTC", shares: "0.06", market_value: "1000" }],
+    }),
+    { crypto: "all" },
+  );
+  assert.deepEqual(snap.cashBalances, {});
+});
+
+test("crypto holdings are quoted in the account currency, not the holding's", () => {
+  const snap = mapAccountToSnapshot(
+    account({
+      balance: "100",
+      holdings: [
+        { id: "h1", symbol: "ETH", shares: "0.03", currency: "ETH" },
+        { id: "h2", symbol: "CLV", shares: "10", currency: "CAD" },
+      ],
+    }),
+    { crypto: "all" },
+  );
+  assert.deepEqual(
+    snap.positions.map((p) => [p.symbol, p.currency, p.quoteCcy]),
+    [["ETH", "USD", "USD"], ["CLV", "USD", "USD"]],
+  );
 });
 
 test("crypto account with no holdings syncs balance as cash", () => {
@@ -89,7 +117,7 @@ test("crypto account with no holdings syncs balance as cash", () => {
   assert.equal(snap.warnings, undefined);
 });
 
-test("crypto account: a zero-share dust holding doesn't block cash", () => {
+test("mixed account: a zero-share coin doesn't block cash", () => {
   const snap = mapAccountToSnapshot(
     account({
       balance: "1200",
@@ -98,7 +126,7 @@ test("crypto account: a zero-share dust holding doesn't block cash", () => {
         { id: "h2", symbol: "SHIB", shares: "0", market_value: "0" },
       ],
     }),
-    { crypto: "all" },
+    { crypto: ["BTC", "SHIB"] },
   );
   assert.deepEqual(snap.cashBalances, { USD: "200" });
   assert.equal(snap.warnings, undefined);

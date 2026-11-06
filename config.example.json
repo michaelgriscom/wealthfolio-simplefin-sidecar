@@ -10,7 +10,7 @@
   // equities on `exchangeMic`. Use "all" when every holding is crypto, or list
   // the crypto tickers for an account that also holds stocks.
   "cryptoAccounts": {
-    "<coinbase-simplefin-account-id>": "all", // Coinbase
+    "<coinbase-wallet-simplefin-account-id>": "all", // Coinbase: list every wallet
     "<mixed-broker-simplefin-account-id>": ["BTC", "ETH"], // stocks + crypto
   },
 

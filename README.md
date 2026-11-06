@@ -109,33 +109,38 @@ docker run --rm … ghcr.io/michaelgriscom/wealthfolio-simplefin-sidecar:latest 
 ### Crypto accounts (`cryptoAccounts`)
 
 Some SimpleFIN feeds report crypto in a way the default mapping gets wrong.
-SimpleFIN's Coinbase feed reports an account whose `balance` is the total USD
-value of its coins while every holding has an empty or zero `market_value`,
-and its tickers are crypto tickers. Without help, Wealthfolio shows the whole
-account as **cash**, and each holding matches a wrong security (BTC -> the
-Grayscale Bitcoin ETF, BCH -> Banco de Chile, COMP -> Compass, Inc. ...).
+SimpleFIN's Coinbase feed reports one account per wallet. A coin wallet's
+`balance` is the USD value of its coins, while its holdings have missing,
+zero or wrong `market_value`s and unreliable currencies (an ETH holding in
+`"ETH"`). Without help, Wealthfolio shows the account's value as **cash**, and
+each holding matches a wrong security (BTC -> the Grayscale Bitcoin ETF, BCH
+-> Banco de Chile, COMP -> Compass, Inc. ...).
 
-List those SimpleFIN accounts under `cryptoAccounts` in the config file:
+List those SimpleFIN accounts under `cryptoAccounts` in the config file. For
+Coinbase, list **every wallet's** SimpleFIN account id:
 
 ```jsonc
 "cryptoAccounts": {
-  "<coinbase-id>": "all",              // every holding is crypto
+  "<coinbase-wallet-id>": "all",       // every holding is crypto
   "<mixed-broker-id>": ["BTC", "ETH"], // only these; other holdings stay stocks
 }
 ```
 
-A plain list of ids (`["<coinbase-id>"]`) also works and means `"all"`. For
-crypto holdings in those accounts:
+A plain list of ids (`["<coinbase-wallet-id>"]`) also works and means
+`"all"`. For crypto holdings in those accounts:
 
 - They are synced as **CRYPTO** instruments (`instrumentType: "CRYPTO"` +
-  `quoteCcy`, no `exchangeMic`). Wealthfolio keys these as
-  `CRYPTO:{BASE}/{QUOTE}` and prices them from market data (Yahoo symbol
-  `BTC-USD`). The setting is scoped per account because many crypto tickers
-  are also stock tickers (AMP, ZETA, NEAR, ...).
-- If any held coin (shares > 0) has an empty or zero `market_value`, the
-  balance can't be split into holdings vs. cash, so **no cash is synced** for
-  that account and a warning is logged. This means fiat cash held in the same account is not
-  synced. Accounts with no holdings still sync their balance as cash.
+  `quoteCcy`, no `exchangeMic`), quoted in the account's currency rather than
+  the holding's. Wealthfolio keys these as `CRYPTO:{BASE}/{QUOTE}` and prices
+  them from market data (Yahoo symbol `BTC-USD`). The setting is scoped per
+  account because many crypto tickers are also stock tickers (AMP, ZETA,
+  NEAR, ...).
+- An `"all"` account with holdings never syncs cash: its balance is the value
+  of its coins. An `"all"` account with no holdings (e.g. a USD wallet) syncs
+  its balance as cash.
+- In a mixed account, if any held coin (shares > 0) has an empty or zero
+  `market_value`, the balance can't be split into holdings vs. cash, so **no
+  cash is synced** for that account and a warning is logged.
 
 Tickers Wealthfolio's market data doesn't know (renamed or delisted coins,
 such as Coinbase's `CGLD` for Celo) will sync without a price.

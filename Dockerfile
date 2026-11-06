@@ -3,7 +3,7 @@
 FROM node:22-slim
 
 WORKDIR /app
-RUN npm install -g tsx@4.19.2
+RUN npm install -g --ignore-scripts tsx@4.19.2
 
 COPY src ./src
 

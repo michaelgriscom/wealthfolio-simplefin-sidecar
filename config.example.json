@@ -5,6 +5,15 @@
   "simplefinAccessUrl": "https://USERNAME:PASSWORD@bridge.simplefin.org/simplefin",
   "exchangeMic": "XNAS",
 
+  // Optional: SimpleFIN accounts holding crypto. Crypto holdings sync as
+  // CRYPTO instruments (Wealthfolio prices them as e.g. BTC-USD) instead of
+  // equities on `exchangeMic`. Use "all" when every holding is crypto, or list
+  // the crypto tickers for an account that also holds stocks.
+  "cryptoAccounts": {
+    "<coinbase-wallet-simplefin-account-id>": "all", // Coinbase: list every wallet
+    "<mixed-broker-simplefin-account-id>": ["BTC", "ETH"], // stocks + crypto
+  },
+
   // Wealthfolio account id -> the SimpleFIN account ids feeding it.
   // Every Wealthfolio account listed here must use HOLDINGS tracking mode.
   "mapping": {

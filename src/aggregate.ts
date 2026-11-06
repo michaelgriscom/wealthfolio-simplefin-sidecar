@@ -7,8 +7,8 @@ function round(n: number, dp: number): number {
 }
 
 /**
- * Merge several per-account snapshots into one. Duplicate tickers (e.g. VTSAX
- * held in multiple accounts) have their quantities summed and average cost
+ * Merge several per-account snapshots into one. Duplicate positions (e.g. VTSAX
+ * held in multiple accounts, matched on ticker + instrument type) have their quantities summed and average cost
  * recomputed as a quantity-weighted mean; cash is summed per currency.
  */
 export function aggregateSnapshots(snapshots: MappedSnapshot[]): MappedSnapshot {
@@ -18,13 +18,17 @@ export function aggregateSnapshots(snapshots: MappedSnapshot[]): MappedSnapshot 
     weightedCost: number;
     hasCost: boolean;
     currency: string;
+    instrumentType?: string;
+    quoteCcy?: string;
   }
   const bySymbol = new Map<string, Agg>();
   const cash: Record<string, number> = {};
 
   for (const snap of snapshots) {
     for (const pos of snap.positions) {
-      const key = pos.symbol.toUpperCase();
+      // Key on instrument type too, so a stock and a crypto coin that share a
+      // ticker (e.g. AMP) from different source accounts stay separate.
+      const key = `${pos.instrumentType ?? ""}|${pos.quoteCcy ?? ""}|${pos.symbol.toUpperCase()}`;
       const qty = Number.parseFloat(pos.quantity) || 0;
       const avg = pos.averageCost !== undefined ? Number.parseFloat(pos.averageCost) : NaN;
       const prev = bySymbol.get(key);
@@ -39,6 +43,8 @@ export function aggregateSnapshots(snapshots: MappedSnapshot[]): MappedSnapshot 
           weightedCost: Number.isFinite(avg) ? qty * avg : 0,
           hasCost: Number.isFinite(avg),
           currency: pos.currency,
+          instrumentType: pos.instrumentType,
+          quoteCcy: pos.quoteCcy,
         });
       }
     }
@@ -53,6 +59,8 @@ export function aggregateSnapshots(snapshots: MappedSnapshot[]): MappedSnapshot 
       symbol: agg.symbol,
       quantity: String(round(agg.quantity, 6)),
       currency: agg.currency,
+      ...(agg.instrumentType ? { instrumentType: agg.instrumentType } : {}),
+      ...(agg.quoteCcy ? { quoteCcy: agg.quoteCcy } : {}),
     };
     if (agg.hasCost && agg.quantity > 0) {
       pos.averageCost = formatCost(agg.weightedCost / agg.quantity);

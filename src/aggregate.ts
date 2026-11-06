@@ -1,5 +1,5 @@
 import type { SnapshotHoldingInput } from "./types";
-import type { MappedSnapshot } from "./mapping";
+import { formatCost, type MappedSnapshot } from "./mapping";
 
 function round(n: number, dp: number): number {
   const f = 10 ** dp;
@@ -55,7 +55,7 @@ export function aggregateSnapshots(snapshots: MappedSnapshot[]): MappedSnapshot 
       currency: agg.currency,
     };
     if (agg.hasCost && agg.quantity > 0) {
-      pos.averageCost = String(round(agg.weightedCost / agg.quantity, 2));
+      pos.averageCost = formatCost(agg.weightedCost / agg.quantity);
     }
     positions.push(pos);
   }

@@ -32,6 +32,30 @@ export interface MapOptions {
   crypto?: boolean;
 }
 
+/**
+ * Legacy `cryptoSymbols` support: return the ids of accounts that have at
+ * least one non-cash holding and whose non-cash holdings are *all* in
+ * `cryptoSymbols`. Inferring at the account level keeps a stock that shares a
+ * crypto ticker (AMP, ZETA, ...) in a brokerage account from being treated as
+ * crypto.
+ */
+export function inferCryptoAccounts(
+  accounts: SimpleFinAccount[],
+  cryptoSymbols: string[],
+  cashSymbols: string[] = DEFAULT_CASH_SYMBOLS,
+): string[] {
+  const crypto = new Set(cryptoSymbols.map((s) => s.toUpperCase()));
+  const cash = new Set(cashSymbols.map((s) => s.toUpperCase()));
+  return accounts
+    .filter((a) => {
+      const symbols = (a.holdings ?? [])
+        .map((h) => (h.symbol ?? "").trim().toUpperCase())
+        .filter((s) => s && !cash.has(s));
+      return symbols.length > 0 && symbols.every((s) => crypto.has(s));
+    })
+    .map((a) => a.id);
+}
+
 /** Normalize a SimpleFIN currency value to a 3-letter ISO code, with a fallback. */
 export function normalizeCurrency(currency: string | undefined, fallback = "USD"): string {
   if (!currency) return fallback;

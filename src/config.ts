@@ -16,6 +16,11 @@ export interface SyncConfig {
    * stock tickers (AMP, ZETA, COMP, ...) don't affect brokerage accounts.
    */
   cryptoAccounts?: string[];
+  /**
+   * Deprecated: use `cryptoAccounts`. Accounts whose non-cash holdings are all
+   * in this list are treated as crypto accounts.
+   */
+  cryptoSymbols?: string[];
   /** Daily run time, 24h "HH:MM" local. */
   syncAt: string;
   port: number;
@@ -28,6 +33,7 @@ interface FileConfig {
   mapping?: Record<string, string[]>;
   exchangeMic?: string;
   cryptoAccounts?: unknown;
+  cryptoSymbols?: unknown;
 }
 
 function stringArray(key: string, value: unknown): string[] | undefined {
@@ -74,6 +80,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SyncConfig {
     port: Number(env.PORT ?? "8080"),
     runOnStart: (env.RUN_ON_START ?? "false").toLowerCase() === "true",
     cryptoAccounts: stringArray("cryptoAccounts", file.cryptoAccounts),
+    cryptoSymbols: stringArray("cryptoSymbols", file.cryptoSymbols),
     exchangeMic: file.exchangeMic ?? env.EXCHANGE_MIC ?? "XNAS",
   };
 }

@@ -1,4 +1,4 @@
-import { mapAccountToSnapshot } from "./mapping";
+import { inferCryptoAccounts, mapAccountToSnapshot } from "./mapping";
 import { fetchAccounts, type SimpleFinAccount } from "./simplefin";
 import { aggregateSnapshots } from "./aggregate";
 import type { SyncConfig } from "./config";
@@ -35,6 +35,18 @@ export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult>
   for (const e of sf.errors ?? []) log.warn(`SimpleFIN connection warning: ${e}`);
   const byId = new Map<string, SimpleFinAccount>(sf.accounts.map((a) => [a.id, a]));
 
+  const cryptoAccounts = new Set(cfg.cryptoAccounts ?? []);
+  if (cfg.cryptoSymbols?.length) {
+    const mappedIds = new Set(Object.values(cfg.mapping).flat());
+    const mapped = sf.accounts.filter((a) => mappedIds.has(a.id) && !cryptoAccounts.has(a.id));
+    const inferred = inferCryptoAccounts(mapped, cfg.cryptoSymbols, cfg.cashSymbols);
+    for (const id of inferred) cryptoAccounts.add(id);
+    log.warn(
+      `config.cryptoSymbols is deprecated. Replace it with: ` +
+        `"cryptoAccounts": ${JSON.stringify([...cryptoAccounts])}`,
+    );
+  }
+
   const wf = new WealthfolioClient(cfg.wfBaseUrl);
   if (!cfg.wfPassword) {
     log.info("WF_PASSWORD not set — connecting without authentication");
@@ -51,7 +63,6 @@ export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult>
       .filter((a): a is SimpleFinAccount => a !== undefined);
     if (sources.length === 0) continue;
 
-    const cryptoAccounts = new Set(cfg.cryptoAccounts ?? []);
     const snapshots = sources.map((a) =>
       mapAccountToSnapshot(a, { cashSymbols: cfg.cashSymbols, crypto: cryptoAccounts.has(a.id) }),
     );

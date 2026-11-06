@@ -134,6 +134,11 @@ such as Coinbase's `CGLD` for Celo) will sync without a price.
 
 Accounts not listed in `cryptoAccounts` are mapped exactly as before.
 
+**Migrating from `cryptoSymbols`:** the older `cryptoSymbols` ticker list is
+still accepted but deprecated. Any mapped account whose non-cash holdings are
+*all* in that list is treated as a crypto account, and each sync logs the
+`"cryptoAccounts": [...]` line to paste into your config in its place.
+
 ## HTTP endpoints
 
 The container serves a tiny status/trigger API on `PORT` (default `8080`):

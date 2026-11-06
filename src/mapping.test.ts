@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mapAccountToSnapshot } from "./mapping";
+import { inferCryptoAccounts, mapAccountToSnapshot } from "./mapping";
 import type { SimpleFinAccount } from "./simplefin";
 
 function account(overrides: Partial<SimpleFinAccount>): SimpleFinAccount {
@@ -87,4 +87,14 @@ test("crypto account with no holdings syncs balance as cash", () => {
   const snap = mapAccountToSnapshot(account({ balance: "50" }), { crypto: true });
   assert.deepEqual(snap.cashBalances, { USD: "50" });
   assert.equal(snap.warnings, undefined);
+});
+
+test("inferCryptoAccounts only picks accounts that are entirely crypto", () => {
+  const accounts = [
+    account({ id: "coinbase", holdings: [{ id: "1", symbol: "BTC" }, { id: "2", symbol: "AMP" }] }),
+    account({ id: "brokerage", holdings: [{ id: "3", symbol: "AMP" }, { id: "4", symbol: "VTI" }] }),
+    account({ id: "mmf-only", holdings: [{ id: "5", symbol: "SPAXX" }] }),
+    account({ id: "empty" }),
+  ];
+  assert.deepEqual(inferCryptoAccounts(accounts, ["BTC", "AMP"]), ["coinbase"]);
 });

@@ -59,6 +59,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SyncConfig {
   if (Object.keys(mapping).length === 0) {
     throw new Error("config.mapping is empty — nothing to sync");
   }
+  for (const [wfId, sfIds] of Object.entries(mapping)) {
+    if (!Array.isArray(sfIds) || !sfIds.every((id) => typeof id === "string")) {
+      throw new Error(`config.mapping["${wfId}"] must be a list of SimpleFIN account ids`);
+    }
+  }
 
   return {
     wfBaseUrl: (env.WF_BASE_URL ?? "http://wealthfolio:8088").replace(/\/+$/, ""),

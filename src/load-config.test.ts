@@ -112,9 +112,14 @@ describe("loadConfig", () => {
     );
   });
 
-  // BUG: this loads today, then runSync throws a TypeError.
-  test.todo("rejects a non-array mapping value", () => {
-    assert.throws(() => load({ ...minimal, mapping: { "wf-1": "sf-1" } }), /mapping/);
+  test("rejects a non-array mapping value", () => {
+    for (const value of ["sf-1", { id: "sf-1" }, ["sf-1", 2], null]) {
+      assert.throws(
+        () => load({ ...minimal, mapping: { "wf-1": value } }),
+        /config\.mapping\["wf-1"\] must be a list of SimpleFIN account ids/,
+        JSON.stringify(value),
+      );
+    }
   });
 
   // A bad SYNC_AT would make msUntilNext return NaN and the scheduler re-fire every ~1ms.

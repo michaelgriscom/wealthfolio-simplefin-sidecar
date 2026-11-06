@@ -20,5 +20,8 @@ jobs:
       - name: Type-check
         run: npm run type-check
 
+      - name: Test
+        run: npm test
+
       - name: Docker build
         run: docker build -t wealthfolio-simplefin-sidecar:ci .

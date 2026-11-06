@@ -32,3 +32,8 @@ jobs:
 
       - name: Docker build
         run: docker build -t wealthfolio-simplefin-sidecar:ci .
+
+      # tsx comes from the image's lockfile install; check it runs TypeScript.
+      - name: Docker smoke test
+        run: |
+          docker run --rm wealthfolio-simplefin-sidecar:ci tsx -e "const n: number = 1; console.log(n)"

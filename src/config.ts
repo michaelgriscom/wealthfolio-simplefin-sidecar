@@ -26,6 +26,21 @@ function required(key: string, value: string | undefined): string {
   return value;
 }
 
+function syncAt(value: string): string {
+  if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(value)) {
+    throw new Error(`SYNC_AT must be a 24h "HH:MM" time, got "${value}"`);
+  }
+  return value;
+}
+
+function port(value: string): number {
+  const n = Number(value);
+  if (!/^\d+$/.test(value) || n < 1 || n > 65535) {
+    throw new Error(`PORT must be an integer from 1 to 65535, got "${value}"`);
+  }
+  return n;
+}
+
 /**
  * Config comes from a mounted JSON file (access URL + mapping — avoids putting
  * credentials and JSON through .env interpolation) plus a few simple env vars.
@@ -53,8 +68,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SyncConfig {
     cashSymbols: env.CASH_SYMBOLS
       ? env.CASH_SYMBOLS.split(",").map((s) => s.trim()).filter(Boolean)
       : undefined,
-    syncAt: env.SYNC_AT ?? "04:00",
-    port: Number(env.PORT ?? "8080"),
+    syncAt: syncAt(env.SYNC_AT ?? "04:00"),
+    port: port(env.PORT ?? "8080"),
     runOnStart: (env.RUN_ON_START ?? "false").toLowerCase() === "true",
     exchangeMic: file.exchangeMic ?? env.EXCHANGE_MIC ?? "XNAS",
   };

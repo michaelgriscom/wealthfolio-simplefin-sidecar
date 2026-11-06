@@ -117,10 +117,14 @@ describe("loadConfig", () => {
     assert.throws(() => load({ ...minimal, mapping: { "wf-1": "sf-1" } }), /mapping/);
   });
 
-  // BUG: both load today. A bad SYNC_AT makes msUntilNext return NaN, and the
-  // scheduler then re-fires every ~1ms.
-  test.todo("rejects an invalid SYNC_AT or PORT", () => {
-    assert.throws(() => load(minimal, { SYNC_AT: "4am" }));
-    assert.throws(() => load(minimal, { PORT: "http" }));
+  // A bad SYNC_AT would make msUntilNext return NaN and the scheduler re-fire every ~1ms.
+  test("rejects an invalid SYNC_AT or PORT", () => {
+    for (const v of ["4am", "24:00", "04:60", "0400", ""]) {
+      assert.throws(() => load(minimal, { SYNC_AT: v }), /SYNC_AT must be a 24h "HH:MM" time/, v);
+    }
+    for (const v of ["http", "0", "65536", "80.5", ""]) {
+      assert.throws(() => load(minimal, { PORT: v }), /PORT must be an integer/, v);
+    }
+    assert.equal(load(minimal, { SYNC_AT: "4:05" }).syncAt, "4:05");
   });
 });

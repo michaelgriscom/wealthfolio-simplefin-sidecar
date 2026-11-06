@@ -22,7 +22,7 @@
     "sync:once": "tsx src/main.ts --once",
     "claim": "tsx src/claim.ts",
     "type-check": "tsc --noEmit",
-    "test": "node --import tsx --test \"src/**/*.test.ts\""
+    "test": "node --import tsx --test src/*.test.ts"
   },
   "devDependencies": {
     "@types/node": "^20.19.33",

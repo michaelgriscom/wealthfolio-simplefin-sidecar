@@ -56,6 +56,20 @@ export function inferCryptoAccounts(
     .map((a) => a.id);
 }
 
+/**
+ * Fiat currencies accepted as a crypto quote/cash currency. A crypto feed's
+ * `currency` can itself be a 3-letter coin code (e.g. "BTC"), which would
+ * otherwise produce pairs like CRYPTO:BTC/BTC.
+ */
+const FIAT_CURRENCIES = new Set([
+  "USD", "EUR", "GBP", "CAD", "AUD", "NZD", "JPY", "CHF", "SEK", "NOK", "DKK",
+  "SGD", "HKD", "CNY", "INR", "KRW", "MXN", "BRL", "ZAR", "PLN", "CZK", "ILS",
+]);
+
+function fiatOr(currency: string, fallback: string): string {
+  return FIAT_CURRENCIES.has(currency) ? currency : fallback;
+}
+
 /** Normalize a SimpleFIN currency value to a 3-letter ISO code, with a fallback. */
 export function normalizeCurrency(currency: string | undefined, fallback = "USD"): string {
   if (!currency) return fallback;
@@ -104,7 +118,8 @@ export function mapAccountToSnapshot(
   options: MapOptions = {},
 ): MappedSnapshot {
   const { cashSymbols = DEFAULT_CASH_SYMBOLS, crypto = false } = options;
-  const accountCurrency = normalizeCurrency(account.currency);
+  const rawAccountCurrency = normalizeCurrency(account.currency);
+  const accountCurrency = crypto ? fiatOr(rawAccountCurrency, "USD") : rawAccountCurrency;
   const cashSet = new Set(cashSymbols.map((s) => s.toUpperCase()));
   const holdings = account.holdings ?? [];
 
@@ -120,9 +135,12 @@ export function mapAccountToSnapshot(
       continue;
     }
     const marketValue = toNumber(holding.market_value);
-    if (marketValue <= 0) missingMarketValue += 1;
+    // A held position (shares > 0) with no positive market value means the
+    // feed didn't price it. Zero-share dust/closed positions don't count.
+    if (marketValue <= 0 && toNumber(holding.shares) > 0) missingMarketValue += 1;
     nonCashMarketValue += marketValue;
-    const currency = normalizeCurrency(holding.currency, accountCurrency);
+    const holdingCurrency = normalizeCurrency(holding.currency, accountCurrency);
+    const currency = crypto ? fiatOr(holdingCurrency, accountCurrency) : holdingCurrency;
     const avg = averageCost(holding);
     positions.push({
       symbol,

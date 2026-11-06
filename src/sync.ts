@@ -36,6 +36,11 @@ export async function runSync(cfg: SyncConfig, log: Logger): Promise<SyncResult>
   const byId = new Map<string, SimpleFinAccount>(sf.accounts.map((a) => [a.id, a]));
 
   const cryptoAccounts = new Set(cfg.cryptoAccounts ?? []);
+  for (const id of cryptoAccounts) {
+    if (!byId.has(id)) {
+      log.warn(`cryptoAccounts lists ${id}, which SimpleFIN did not return; check the id`);
+    }
+  }
   if (cfg.cryptoSymbols?.length) {
     const mappedIds = new Set(Object.values(cfg.mapping).flat());
     const mapped = sf.accounts.filter((a) => mappedIds.has(a.id) && !cryptoAccounts.has(a.id));

@@ -98,3 +98,45 @@ test("inferCryptoAccounts only picks accounts that are entirely crypto", () => {
   ];
   assert.deepEqual(inferCryptoAccounts(accounts, ["BTC", "AMP"]), ["coinbase"]);
 });
+
+test("crypto account: a zero-share dust holding doesn't block cash", () => {
+  const snap = mapAccountToSnapshot(
+    account({
+      balance: "1200",
+      holdings: [
+        { id: "h1", symbol: "BTC", shares: "0.01", market_value: "1000" },
+        { id: "h2", symbol: "SHIB", shares: "0", market_value: "0" },
+      ],
+    }),
+    { crypto: true },
+  );
+  assert.deepEqual(snap.cashBalances, { USD: "200" });
+  assert.equal(snap.warnings, undefined);
+});
+
+test("crypto account: a coin-code currency falls back to USD", () => {
+  const snap = mapAccountToSnapshot(
+    account({
+      currency: "BTC",
+      balance: "100",
+      holdings: [{ id: "h1", symbol: "BTC", shares: "0.001", market_value: "100", currency: "BTC" }],
+    }),
+    { crypto: true },
+  );
+  assert.equal(snap.positions[0].currency, "USD");
+  assert.equal(snap.positions[0].quoteCcy, "USD");
+  const empty = mapAccountToSnapshot(account({ currency: "BTC", balance: "5" }), { crypto: true });
+  assert.deepEqual(empty.cashBalances, { USD: "5" });
+});
+
+test("crypto account keeps a non-USD fiat quote currency", () => {
+  const snap = mapAccountToSnapshot(
+    account({
+      currency: "EUR",
+      balance: "100",
+      holdings: [{ id: "h1", symbol: "BTC", shares: "0.001", market_value: "100" }],
+    }),
+    { crypto: true },
+  );
+  assert.equal(snap.positions[0].quoteCcy, "EUR");
+});

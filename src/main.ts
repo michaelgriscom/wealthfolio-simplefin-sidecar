@@ -1,6 +1,7 @@
 import * as http from "node:http";
 import { loadConfig } from "./config";
 import { runSync, type Logger, type SyncResult } from "./sync";
+import { msUntilNext } from "./schedule";
 
 const cfg = loadConfig();
 
@@ -32,15 +33,6 @@ async function doSync(trigger: string): Promise<SyncResult> {
   } finally {
     running = false;
   }
-}
-
-function msUntilNext(hhmm: string): number {
-  const [h, m] = hhmm.split(":").map((n) => Number.parseInt(n, 10));
-  const now = new Date();
-  const next = new Date(now);
-  next.setHours(h, m, 0, 0);
-  if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
-  return next.getTime() - now.getTime();
 }
 
 function scheduleDaily(): void {

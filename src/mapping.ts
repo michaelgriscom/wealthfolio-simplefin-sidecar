@@ -51,11 +51,22 @@ function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
+/**
+ * Format a per-share cost: cents from $1 up, otherwise 6 significant digits so
+ * sub-cent costs (e.g. $0.0000085) don't round to "0". Never in exponent form.
+ */
+export function formatCost(n: number): string {
+  if (n >= 1) return String(round2(n));
+  if (n <= 0) return "0";
+  const dp = Math.min(20, 5 - Math.floor(Math.log10(n)));
+  return n.toFixed(dp).replace(/\.?0+$/, "");
+}
+
 /** Per-share average cost from SimpleFIN's total cost_basis, if derivable. */
 function averageCost(holding: SimpleFinHolding): string | undefined {
   const shares = toNumber(holding.shares);
   const costBasis = toNumber(holding.cost_basis);
-  if (shares > 0 && costBasis > 0) return String(round2(costBasis / shares));
+  if (shares > 0 && costBasis > 0) return formatCost(costBasis / shares);
   return undefined;
 }
 
